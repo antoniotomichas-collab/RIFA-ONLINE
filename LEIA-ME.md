@@ -42,19 +42,23 @@ npm start
 
 Abra http://localhost:3000 (site) e http://localhost:3000/admin (painel, até você trocar o endereço).
 
-## Colocar no ar (recomendado: Railway)
+## Colocar no ar no Render
 
-Os dados (pedidos, configurações e foto) ficam na pasta `data/`, então a
-hospedagem precisa de um disco permanente.
+O repositório já tem o arquivo `render.yaml`, que configura tudo sozinho.
 
-1. Suba esta pasta para um repositório no GitHub.
-2. Em https://railway.app crie um projeto com "Deploy from GitHub repo".
-3. No serviço, adicione um **Volume** montado em `/data`.
-4. Em **Variables**, adicione `DATA_DIR=/data` e `ADMIN_SENHA=sua-senha-forte`.
-5. Em **Settings → Networking**, clique em "Generate Domain" para ganhar o link público.
+1. Entre em https://dashboard.render.com e conecte sua conta do GitHub.
+2. Clique em **New > Blueprint** e escolha o repositório `RIFA-ONLINE`.
+3. O Render pede o valor de `ADMIN_SENHA`: digite a senha que você quer para o painel.
+4. Clique em **Apply**. Em poucos minutos o site fica no ar em `https://rifa-online-XXXX.onrender.com`.
 
-Também funciona em Render (com Persistent Disk), Fly.io ou qualquer VPS
-(há um `Dockerfile` pronto).
+Toda atualização enviada para a branch `main` do GitHub é publicada automaticamente.
+
+O plano usado é o **Starter** (cerca de US$ 7/mês), porque ele permite um disco
+permanente de 1 GB em `/var/data`, onde ficam pedidos, configurações e fotos. No plano
+grátis o Render apaga esses arquivos a cada reinício, e você perderia as vendas.
+
+Também funciona em Railway, Fly.io ou qualquer VPS (há um `Dockerfile` pronto);
+nesses casos defina `DATA_DIR` apontando para um disco permanente.
 
 ## Variáveis de ambiente
 

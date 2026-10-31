@@ -1,0 +1,23 @@
+# Configuração do Render (Blueprint). No painel do Render: New > Blueprint > escolha este repositório.
+services:
+  - type: web
+    name: rifa-online
+    runtime: node
+    # O plano pago é necessário para o disco: sem ele os pedidos e fotos somem a cada reinício.
+    plan: starter
+    region: oregon
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /api/rifa
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATA_DIR
+        value: /var/data
+      - key: ADMIN_SENHA
+        sync: false
+    disk:
+      name: dados-rifa
+      mountPath: /var/data
+      sizeGB: 1

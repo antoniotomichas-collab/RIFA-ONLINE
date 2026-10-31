@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Rifa Online</title>
+  <!--META-->
+  <meta name="theme-color" content="#0f1020">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎟️</text></svg>">
+
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div id="ganhador" class="card ganhador-publico hidden"></div>
+
+    <div class="card hero">
+      <div id="fotoBox"></div>
+      <div class="info">
+        <div class="titulo" id="titulo">Carregando…</div>
+        <p class="muted" id="descricao"></p>
+        <div class="premio-label" id="rotuloPremio">🏆 Prêmio</div>
+        <div class="premio" id="premio"></div>
+        <div class="preco-box">
+          <span class="preco-label" id="rotuloPreco">Valor por número</span>
+          <span class="preco" id="preco"></span>
+        </div>
+        <div class="chips" id="chips"></div>
+      </div>
+    </div>
+
+    <div class="card" id="meusPedidosCard">
+      <div class="linha" style="justify-content:space-between">
+        <h3 style="margin:0">Já comprou? Consulte seus números</h3>
+      </div>
+      <div id="meusPedidosLocal"></div>
+      <form id="consultaForm" class="linha" style="margin-top:10px">
+        <input id="consultaTel" type="tel" placeholder="Seu WhatsApp com DDD" style="flex:1;min-width:180px">
+        <button class="btn">Consultar</button>
+      </form>
+      <div id="consultaRes"></div>
+    </div>
+
+    <div class="card">
+      <h2 id="tituloNumeros">Escolha seus números</h2>
+      <div class="progresso" id="progressoBox"><div id="barra"></div></div>
+      <p class="muted" id="vendidosTxt" style="margin-top:0"></p>
+      <div class="legenda">
+        <span class="l-livre">Disponível</span>
+        <span class="l-sel">Selecionado</span>
+        <span class="l-res">Reservado</span>
+        <span class="l-pago">Pago</span>
+      </div>
+      <div class="filtros">
+        <button class="btn btn-pq" data-filtro="todos">Todos</button>
+        <button class="btn btn-pq" data-filtro="livres">Só disponíveis</button>
+        <button class="btn btn-pq btn-roxo aleat" data-aleatorio="1">🎲 +1 aleatório</button>
+        <button class="btn btn-pq btn-roxo aleat" data-aleatorio="5">🎲 +5</button>
+        <button class="btn btn-pq btn-roxo aleat" data-aleatorio="10">🎲 +10</button>
+        <button class="btn btn-pq" id="limpar">Limpar</button>
+      </div>
+      <input id="busca" type="number" inputmode="numeric" placeholder="Buscar número…" style="margin-bottom:12px">
+      <div class="grade" id="grade"></div>
+      <div class="center mais"><button class="btn hidden" id="maisBtn">Mostrar mais números</button></div>
+    </div>
+
+    <p class="center muted" style="font-size:13px;white-space:pre-line" id="rodape"></p>
+  </div>
+
+  <div class="barra-compra hidden" id="barraCompra">
+    <div class="resumo"><span id="qtdSel">0 números</span><br><b id="totalSel">R$ 0,00</b></div>
+    <button class="btn btn-primario" id="comprarBtn">Comprar com Pix</button>
+  </div>
+
+  <div class="modal hidden" id="modal">
+    <div class="card">
+      <h2>Finalizar compra</h2>
+      <p class="muted" id="modalResumo"></p>
+      <form id="compraForm">
+        <label for="nome">Nome completo</label>
+        <input id="nome" required autocomplete="name">
+        <label for="telefone">WhatsApp (com DDD)</label>
+        <input id="telefone" type="tel" required autocomplete="tel" placeholder="(11) 91234-5678">
+        <div id="compraErro" class="erro hidden"></div>
+        <div class="linha" style="margin-top:16px">
+          <button type="button" class="btn" id="fecharModal">Voltar</button>
+          <button class="btn btn-primario" style="flex:1" id="confirmarCompra">Gerar Pix</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/comum.js"></script>
+  <script>
+    let rifa = null, ocupados = {}, selecionados = new Set(), filtro = 'todos', limite = 500;
+
+    async function carregar() {
+      const d = await api('/api/rifa');
+      rifa = d.config;
+      ocupados = d.ocupados;
+      for (const n of [...selecionados]) if (ocupados[n] || n > rifa.quantidade) selecionados.delete(n);
+      const a = rifa.aparencia;
+      aplicarAparencia(a);
+      $('#rotuloPremio').textContent = a.rotuloPremio;
+      $('#rotuloPreco').textContent = a.rotuloPreco;
+      $('#tituloNumeros').textContent = a.tituloNumeros;
+      $('#comprarBtn').textContent = a.textoBotao;
+      $('#rodape').textContent = a.rodape;
+      $('#progressoBox').classList.toggle('hidden', !a.mostrarProgresso);
+      $('#vendidosTxt').classList.toggle('hidden', !a.mostrarContagem);
+      document.querySelectorAll('.aleat').forEach(b => b.classList.toggle('hidden', !a.mostrarAleatorio));
+      $('#meusPedidosCard').classList.toggle('hidden', !a.mostrarConsulta);
+      document.title = rifa.titulo;
+      $('#titulo').textContent = rifa.titulo;
+      $('#descricao').textContent = rifa.descricao;
+      $('#premio').textContent = rifa.premio;
+      const [reais, cent] = Number(rifa.preco).toFixed(2).split('.');
+      $('#preco').innerHTML = `<small>R$</small> ${Number(reais).toLocaleString('pt-BR')}<small>,${cent}</small>`;
+      montarGaleria($('#fotoBox'), rifa.fotos || (rifa.foto ? [rifa.foto] : []), a, rifa.premio);
+      const chips = [`🔢 ${rifa.quantidade} números`, '💠 Pagamento via Pix'];
+      if (rifa.dataSorteio) chips.push(`📅 Sorteio: ${esc(rifa.dataSorteio)}`);
+      if (rifa.whatsapp && a.mostrarWhatsapp) chips.push(`<a href="https://wa.me/55${esc(rifa.whatsapp)}" target="_blank" rel="noopener">💬 Falar com o organizador</a>`);
+      $('#chips').innerHTML = chips.map(c => `<span class="chip">${c}</span>`).join('');
+
+      const vendidos = Object.values(ocupados).filter(s => s === 'pago').length;
+      const reservados = Object.keys(ocupados).length - vendidos;
+      $('#barra').style.width = (Object.keys(ocupados).length / rifa.quantidade * 100) + '%';
+      $('#vendidosTxt').textContent = `${vendidos} pagos · ${reservados} reservados · ${rifa.quantidade - vendidos - reservados} disponíveis`;
+
+      if (d.ganhador && a.mostrarGanhador) {
+        $('#ganhador').classList.remove('hidden');
+        $('#ganhador').innerHTML = `<div class="premio-label" style="color:#e9d5ff">🎉 Resultado do sorteio</div>
+          <div class="numero">${pad(d.ganhador.numero, rifa.quantidade)}</div>
+          <div>Ganhador(a): <b>${esc(d.ganhador.nome)}</b></div>`;
+      } else $('#ganhador').classList.add('hidden');
+
+      desenharGrade();
+      atualizarBarra();
+    }
+
+    function desenharGrade() {
+      const busca = parseInt($('#busca').value, 10);
+      const html = [];
+      let mostrados = 0, restantes = false;
+      for (let n = 1; n <= rifa.quantidade; n++) {
+        if (busca && !String(n).includes(String(busca))) continue;
+        if (filtro === 'livres' && ocupados[n]) continue;
+        if (mostrados >= limite) { restantes = true; break; }
+        const st = ocupados[n];
+        const cls = st ? st : (selecionados.has(n) ? 'sel' : '');
+        html.push(`<button class="num ${cls}" data-n="${n}" ${st ? 'disabled' : ''}>${pad(n, rifa.quantidade)}</button>`);
+        mostrados++;
+      }
+      $('#grade').innerHTML = html.join('') || '<p class="muted">Nenhum número encontrado.</p>';
+      $('#maisBtn').classList.toggle('hidden', !restantes);
+      document.querySelectorAll('[data-filtro]').forEach(b => b.classList.toggle('btn-primario', b.dataset.filtro === filtro));
+    }
+
+    function atualizarBarra() {
+      const q = selecionados.size;
+      $('#barraCompra').classList.toggle('hidden', q === 0);
+      document.body.classList.toggle('com-barra', q > 0);
+      $('#qtdSel').textContent = q === 1 ? '1 número' : `${q} números`;
+      $('#totalSel').textContent = brl(q * rifa.preco);
+    }
+
+    $('#grade').addEventListener('click', e => {
+      const b = e.target.closest('.num');
+      if (!b || b.disabled) return;
+      const n = Number(b.dataset.n);
+      selecionados.has(n) ? selecionados.delete(n) : selecionados.add(n);
+      b.classList.toggle('sel');
+      atualizarBarra();
+    });
+    document.querySelectorAll('[data-filtro]').forEach(b => b.onclick = () => { filtro = b.dataset.filtro; desenharGrade(); });
+    document.querySelectorAll('[data-aleatorio]').forEach(b => b.onclick = () => {
+      const livres = [];
+      for (let n = 1; n <= rifa.quantidade; n++) if (!ocupados[n] && !selecionados.has(n)) livres.push(n);
+      for (let i = 0; i < Number(b.dataset.aleatorio) && livres.length; i++) {
+        selecionados.add(livres.splice(Math.floor(Math.random() * livres.length), 1)[0]);
+      }
+      desenharGrade(); atualizarBarra();
+    });
+    $('#limpar').onclick = () => { selecionados.clear(); desenharGrade(); atualizarBarra(); };
+    $('#busca').oninput = desenharGrade;
+    $('#maisBtn').onclick = () => { limite += 500; desenharGrade(); };
+
+    // Compra
+    mascaraTelefone($('#telefone'));
+    mascaraTelefone($('#consultaTel'));
+    $('#comprarBtn').onclick = () => {
+      if (!rifa.pixConfigurado) return alert('A rifa ainda não está aberta para pagamentos.');
+      const nums = [...selecionados].sort((a, b) => a - b).map(n => pad(n, rifa.quantidade));
+      $('#modalResumo').innerHTML = `Números: <b>${nums.join(', ')}</b><br>Total: <b style="color:var(--destaque)">${brl(nums.length * rifa.preco)}</b>`;
+      $('#compraErro').classList.add('hidden');
+      $('#modal').classList.remove('hidden');
+      $('#nome').focus();
+    };
+    $('#fecharModal').onclick = () => $('#modal').classList.add('hidden');
+    $('#compraForm').onsubmit = async e => {
+      e.preventDefault();
+      const btn = $('#confirmarCompra');
+      btn.disabled = true; btn.textContent = 'Gerando…';
+      try {
+        const r = await api('/api/pedidos', {
+          method: 'POST',
+          body: JSON.stringify({ nome: $('#nome').value, telefone: $('#telefone').value, numeros: [...selecionados] })
+        });
+        guardarPedidoLocal(r.id);
+        location.href = '/pedido/' + r.id;
+      } catch (err) {
+        $('#compraErro').textContent = err.message;
+        $('#compraErro').classList.remove('hidden');
+        if (err.status === 409) { await carregar(); }
+      } finally {
+        btn.disabled = false; btn.textContent = 'Gerar Pix';
+      }
+    };
+
+    // Consulta
+    function listaPedidos(lista) {
+      return lista.map(p => `<div class="pedido-item">
+        <div class="cab"><b>Pedido #${esc(p.codigo)}</b><span class="tag tag-${p.status}">${STATUS_TXT[p.status]}</span></div>
+        <div class="muted" style="margin:6px 0">${p.numeros.map(n => pad(n, rifa.quantidade)).join(', ')} · ${brl(p.total)}</div>
+        <a href="/pedido/${p.id}">Ver pedido →</a></div>`).join('');
+    }
+    $('#consultaForm').onsubmit = async e => {
+      e.preventDefault();
+      try {
+        const l = await api('/api/consulta?telefone=' + encodeURIComponent($('#consultaTel').value));
+        $('#consultaRes').innerHTML = l.length ? '<div style="margin-top:12px">' + listaPedidos(l) + '</div>' : '<p class="muted">Nenhum pedido encontrado para esse número.</p>';
+      } catch (err) { $('#consultaRes').innerHTML = `<div class="erro">${esc(err.message)}</div>`; }
+    };
+    async function pedidosLocais() {
+      const ids = meusPedidosLocal().slice(0, 5);
+      const lista = [];
+      for (const id of ids) { try { lista.push(await api('/api/pedidos/' + id)); } catch {} }
+      $('#meusPedidosLocal').innerHTML = lista.length ? '<p class="muted" style="margin:8px 0">Pedidos feitos neste aparelho:</p>' + listaPedidos(lista) : '';
+    }
+
+    carregar().then(pedidosLocais).catch(e => { $('#titulo').textContent = e.message; });
+    setInterval(() => carregar().catch(() => {}), 30000);
+  </script>
+</body>
+</html>

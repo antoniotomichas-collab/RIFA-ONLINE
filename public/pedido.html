@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0f1020">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎟️</text></svg>">
+
+  <title>Meu pedido</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="wrap pedido-wrap" style="max-width:560px">
+    <p><a href="/">← Voltar para a rifa</a></p>
+    <div id="conteudo"><div class="card center">Carregando…</div></div>
+  </div>
+
+  <script src="/comum.js"></script>
+  <script>
+    const id = location.pathname.split('/').pop();
+    let statusAnterior = null;
+
+    const TELAS = {
+      pendente: ['⏳', 'Aguardando confirmação', 'Pague o Pix abaixo. Assim que o organizador confirmar o recebimento, esta página mostra <b>CONFIRMADO</b>.'],
+      pago: ['✅', 'PAGAMENTO CONFIRMADO!', 'Seus números estão garantidos. Boa sorte! 🍀'],
+      cancelado: ['❌', 'Pedido cancelado', 'Este pedido foi cancelado pelo organizador e os números foram liberados.'],
+      expirado: ['⌛', 'Reserva expirada', 'O prazo para pagamento acabou e os números foram liberados. Se você já pagou, fale com o organizador.']
+    };
+
+    async function carregar() {
+      let p;
+      try { p = await api('/api/pedidos/' + id); }
+      catch (e) { $('#conteudo').innerHTML = `<div class="card erro">${esc(e.message)}</div>`; return; }
+      guardarPedidoLocal(p.id);
+      if (p.status === statusAnterior) return;
+      if (statusAnterior === 'pendente' && p.status === 'pago' && navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      statusAnterior = p.status;
+
+      aplicarAparencia(p.rifa.aparencia);
+      TELAS.pendente[2] = esc(p.rifa.aparencia.msgPendente);
+      TELAS.pago[2] = esc(p.rifa.aparencia.msgConfirmado);
+      const [icone, titulo, texto] = TELAS[p.status];
+      const total = p.rifa.quantidade;
+      let html = `<div class="status-grande st-${p.status}">
+          <div class="icone">${icone}</div><h2>${titulo}</h2><p style="margin:0">${texto}</p></div>
+        <div class="card">
+          <div class="muted">Pedido #${esc(p.codigo)} · ${esc(p.nome)}</div>
+          <h3 style="margin-top:6px">${esc(p.rifa.premio)}</h3>
+          <div class="nums-lista">${p.numeros.map(n => `<span>${pad(n, total)}</span>`).join('')}</div>
+          <div style="margin-top:12px">Total</div>
+          <div class="total-grande">${brl(p.total)}</div>
+        </div>`;
+
+      if (p.status === 'pendente') {
+        const expira = p.reservaMinutos > 0 ? new Date(new Date(p.criadoEm).getTime() + p.reservaMinutos * 60000) : null;
+        html += `<div class="card center">
+          <h3>Pague com Pix</h3>
+          <img class="qr" src="${p.qr}" alt="QR Code Pix">
+          <p class="muted" style="margin-bottom:0">Ou use o Pix Copia e Cola:</p>
+          <div class="copia" id="pixCopia">${esc(p.pix)}</div>
+          <button class="btn btn-primario btn-full" id="copiarBtn">📋 Copiar código Pix</button>
+          ${expira ? `<p class="muted" style="font-size:14px">Pague até <b>${expira.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b> de ${expira.toLocaleDateString('pt-BR')} ou a reserva expira.</p>` : ''}
+          ${p.rifa.whatsapp && p.rifa.aparencia.mostrarWhatsapp ? `<a class="btn btn-verde btn-full" target="_blank" rel="noopener"
+             href="https://wa.me/55${esc(p.rifa.whatsapp)}?text=${encodeURIComponent(`Olá! Paguei o pedido #${p.codigo} da rifa (${brl(p.total)}). Segue o comprovante.`)}">💬 Enviar comprovante no WhatsApp</a>` : ''}
+          <p class="muted" style="font-size:13px">Esta página atualiza sozinha. Guarde o link para acompanhar.</p>
+        </div>`;
+      }
+      $('#conteudo').innerHTML = html;
+      const copiar = $('#copiarBtn');
+      if (copiar) copiar.onclick = async () => {
+        try { await navigator.clipboard.writeText(p.pix); }
+        catch {
+          const r = document.createRange(); r.selectNodeContents($('#pixCopia'));
+          getSelection().removeAllRanges(); getSelection().addRange(r); document.execCommand('copy');
+        }
+        copiar.textContent = '✔ Código copiado!';
+        setTimeout(() => copiar.textContent = '📋 Copiar código Pix', 2500);
+      };
+    }
+
+    carregar();
+    setInterval(carregar, 8000);
+  </script>
+</body>
+</html>

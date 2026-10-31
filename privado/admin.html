@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Admin da Rifa</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- Login -->
+    <div id="telaLogin" class="card" style="max-width:380px;margin:60px auto">
+      <h2>🔐 Painel do organizador</h2>
+      <form id="loginForm">
+        <label for="senha">Senha</label>
+        <input id="senha" type="password" autocomplete="current-password" required>
+        <div id="loginErro" class="erro hidden"></div>
+        <button class="btn btn-primario btn-full" style="margin-top:16px">Entrar</button>
+      </form>
+    </div>
+
+    <!-- Painel -->
+    <div id="painel" class="hidden">
+      <div class="topo">
+        <h2 style="margin:0">Painel da Rifa</h2>
+        <div class="linha">
+          <a class="btn btn-pq" href="/" target="_blank">Ver site ↗</a>
+          <button class="btn btn-pq" id="sairBtn">Sair</button>
+        </div>
+      </div>
+      <div id="avisos"></div>
+      <div class="abas">
+        <button class="btn ativa" data-aba="pedidos">💰 Pedidos</button>
+        <button class="btn" data-aba="config">⚙️ Configurações</button>
+        <button class="btn" data-aba="aparencia">🎨 Aparência</button>
+        <button class="btn" data-aba="sorteio">🎡 Roleta de sorteio</button>
+      </div>
+
+      <!-- Pedidos -->
+      <section id="aba-pedidos">
+        <div class="stats" id="stats"></div>
+        <div class="card">
+          <div class="linha" style="margin-bottom:12px">
+            <select id="filtroStatus" style="width:auto">
+              <option value="pendente">Aguardando confirmação</option>
+              <option value="pago">Pagos</option>
+              <option value="todos">Todos</option>
+              <option value="cancelado">Cancelados</option>
+              <option value="expirado">Expirados</option>
+            </select>
+            <input id="buscaPedido" placeholder="Buscar nome, telefone, número ou #pedido" style="flex:1;min-width:200px">
+          </div>
+          <div id="listaPedidos"></div>
+        </div>
+      </section>
+
+      <!-- Configurações -->
+      <section id="aba-config" class="hidden">
+        <form id="configForm" class="card">
+          <h3>Rifa</h3>
+          <label>Título da rifa</label>
+          <input name="titulo" required>
+          <label>Prêmio (aparece bem grande)</label>
+          <input name="premio" required>
+          <label>Descrição / regras</label>
+          <textarea name="descricao"></textarea>
+          <div class="grid2">
+            <div><label>Valor de cada número (R$)</label><input name="preco" inputmode="decimal" required></div>
+            <div><label>Quantidade de números</label><input name="quantidade" type="number" min="1" max="100000" required></div>
+            <div><label>Data do sorteio (texto livre)</label><input name="dataSorteio" placeholder="Ex: 20/12 às 20h pela Loteria Federal"></div>
+            <div><label>Seu WhatsApp (para receber comprovantes)</label><input name="whatsapp" type="tel" placeholder="(11) 91234-5678"></div>
+            <div><label>Prazo para pagar (minutos, 0 = sem prazo)</label><input name="reservaMinutos" type="number" min="0"></div>
+          </div>
+
+          <h3 style="margin-top:24px">Pix (único meio de pagamento)</h3>
+          <div class="grid2">
+            <div><label>Chave Pix</label><input name="pixChave" placeholder="CPF, celular (+55…), e-mail ou chave aleatória"></div>
+            <div><label>Nome do recebedor</label><input name="pixNome" placeholder="Como aparece no banco"></div>
+            <div><label>Cidade do recebedor</label><input name="pixCidade" placeholder="Ex: Sao Paulo"></div>
+          </div>
+          <p class="muted" style="font-size:13px">Celular como chave Pix deve ter o formato <b>+5511912345678</b>. CPF/CNPJ só números.</p>
+          <div id="configMsg"></div>
+          <button class="btn btn-primario" style="margin-top:12px">Salvar configurações</button>
+        </form>
+
+        <div class="card">
+          <h3>Fotos do prêmio</h3>
+          <p class="muted" style="font-size:14px;margin-top:0">Até 10 fotos. Elas passam sozinhas no topo do site com o efeito escolhido na aba <b>Aparência</b>. A primeira é a capa e aparece na prévia do link no WhatsApp. GIF animado também funciona.</p>
+          <div class="fotos-admin" id="fotosLista"></div>
+          <label for="fotoInput">Adicionar fotos</label>
+          <input type="file" id="fotoInput" accept="image/*" multiple>
+          <div id="fotoMsg"></div>
+        </div>
+
+        <form class="card" id="enderecoForm">
+          <h3>Endereço secreto do painel</h3>
+          <p class="muted" style="font-size:14px;margin-top:0">O site público não tem nenhum link para cá. Só entra quem souber este endereço e a senha.</p>
+          <div class="linha">
+            <span class="muted" id="enderecoBase"></span>
+            <input id="endereco" style="flex:1;min-width:160px" placeholder="painel-antonio-2024" required>
+          </div>
+          <div id="enderecoMsg"></div>
+          <button class="btn" style="margin-top:12px">Salvar endereço</button>
+        </form>
+
+        <form class="card" id="senhaForm">
+          <h3>Trocar senha do admin</h3>
+          <input id="novaSenha" type="password" minlength="6" placeholder="Nova senha (mín. 6 caracteres)" required>
+          <div id="senhaMsg"></div>
+          <button class="btn" style="margin-top:12px">Salvar nova senha</button>
+        </form>
+      </section>
+
+      <!-- Aparência -->
+      <section id="aba-aparencia" class="hidden">
+        <form id="aparenciaForm" class="card">
+          <h3>Cores</h3>
+          <div class="cores">
+            <label class="cor"><input type="color" name="corFundo"> Fundo</label>
+            <label class="cor"><input type="color" name="corTexto"> Texto</label>
+            <label class="cor"><input type="color" name="corDestaque"> Valor e botões</label>
+            <label class="cor"><input type="color" name="corPremio"> Nome do prêmio</label>
+            <label class="cor"><input type="color" name="corSecundaria"> Detalhes</label>
+          </div>
+
+          <h3 style="margin-top:24px">Animação das fotos</h3>
+          <div class="grid2">
+            <div><label>Efeito</label>
+              <select name="efeitoFoto">
+                <option value="cinema">🎬 Cinema (aproxima devagar)</option>
+                <option value="zoom">🔍 Zoom vai e volta</option>
+                <option value="brilho">✨ Brilho passando</option>
+                <option value="flutuar">🎈 Flutuar</option>
+                <option value="pulsar">💓 Pulsar</option>
+                <option value="nenhum">Sem efeito</option>
+              </select></div>
+            <div><label>Troca entre fotos</label>
+              <select name="transicaoFoto">
+                <option value="esmaecer">Esmaecer</option>
+                <option value="deslizar">Deslizar para o lado</option>
+              </select></div>
+            <div><label>Segundos em cada foto</label><input name="intervaloFoto" type="number" min="2" max="30"></div>
+          </div>
+
+          <h3 style="margin-top:24px">Textos do site</h3>
+          <div class="grid2">
+            <div><label>Etiqueta acima do prêmio</label><input name="rotuloPremio"></div>
+            <div><label>Etiqueta do valor</label><input name="rotuloPreco"></div>
+            <div><label>Título da grade de números</label><input name="tituloNumeros"></div>
+            <div><label>Texto do botão de compra</label><input name="textoBotao"></div>
+          </div>
+          <label>Mensagem enquanto espera a confirmação</label>
+          <textarea name="msgPendente"></textarea>
+          <label>Mensagem quando o pagamento é confirmado</label>
+          <textarea name="msgConfirmado"></textarea>
+          <label>Rodapé</label>
+          <textarea name="rodape"></textarea>
+
+          <h3 style="margin-top:24px">O que aparece no site</h3>
+          <label class="chk"><input type="checkbox" name="mostrarProgresso"> Barra de progresso das vendas</label>
+          <label class="chk"><input type="checkbox" name="mostrarContagem"> Contagem de pagos, reservados e disponíveis</label>
+          <label class="chk"><input type="checkbox" name="mostrarAleatorio"> Botões de número aleatório</label>
+          <label class="chk"><input type="checkbox" name="mostrarConsulta"> Caixa "Consulte seus números"</label>
+          <label class="chk"><input type="checkbox" name="mostrarWhatsapp"> Botões do seu WhatsApp</label>
+          <label class="chk"><input type="checkbox" name="mostrarGanhador"> Resultado do sorteio no topo do site</label>
+
+          <div id="aparenciaMsg"></div>
+          <div class="linha" style="margin-top:16px">
+            <button class="btn btn-primario">Salvar aparência</button>
+            <button type="button" class="btn" id="aparenciaPadrao">Voltar ao padrão</button>
+          </div>
+        </form>
+        <div class="card">
+          <div class="linha" style="justify-content:space-between;margin-bottom:12px">
+            <h3 style="margin:0">Pré-visualização</h3>
+            <span class="muted" style="font-size:13px">Atualiza ao salvar</span>
+          </div>
+          <iframe id="previa" class="previa" title="Pré-visualização do site"></iframe>
+        </div>
+      </section>
+
+      <!-- Sorteio -->
+      <section id="aba-sorteio" class="hidden">
+        <div class="card center">
+          <h3>Roleta de sorteio</h3>
+          <p class="muted" id="sorteioInfo"></p>
+          <div class="roleta-area">
+            <div class="ponteiro"></div>
+            <canvas id="roleta" width="880" height="880"></canvas>
+          </div>
+          <div class="vencedor">
+            <div class="muted" id="giraTxt">&nbsp;</div>
+            <div class="numero" id="numeroAtual">--</div>
+            <div id="vencedorInfo"></div>
+          </div>
+          <button class="btn btn-primario" style="margin-top:16px;font-size:20px;padding:16px 32px" id="girarBtn">🎡 GIRAR ROLETA</button>
+          <div id="sorteioErro"></div>
+        </div>
+        <div class="card">
+          <div class="linha" style="justify-content:space-between">
+            <h3 style="margin:0">Histórico de sorteios</h3>
+            <button class="btn btn-pq" id="limparSorteios">Limpar histórico</button>
+          </div>
+          <p class="muted" style="font-size:13px">O último sorteio aparece como resultado no site público. Enquanto houver sorteio no histórico, novas compras ficam bloqueadas.</p>
+          <div id="historico"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="/comum.js"></script>
+  <script>
+    let token = sessionStorage.getItem('rifa_admin') || '';
+    let dados = null;
+
+    const adm = (url, op = {}) => api(url, { ...op, headers: { Authorization: 'Bearer ' + token } }).catch(e => {
+      if (e.status === 401) sair();
+      throw e;
+    });
+
+    function sair() {
+      token = ''; sessionStorage.removeItem('rifa_admin');
+      $('#painel').classList.add('hidden'); $('#telaLogin').classList.remove('hidden');
+    }
+    $('#sairBtn').onclick = sair;
+
+    $('#loginForm').onsubmit = async e => {
+      e.preventDefault();
+      try {
+        const r = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ senha: $('#senha').value }) });
+        token = r.token; sessionStorage.setItem('rifa_admin', token);
+        entrar();
+      } catch (err) { $('#loginErro').textContent = err.message; $('#loginErro').classList.remove('hidden'); }
+    };
+
+    async function entrar() {
+      await recarregar();
+      $('#telaLogin').classList.add('hidden'); $('#painel').classList.remove('hidden');
+      preencherConfig();
+    }
+
+    async function recarregar() {
+      dados = await adm('/api/admin/dados');
+      const avisos = [];
+      if (dados.senhaPadrao) avisos.push('⚠️ Você está usando a senha padrão. Troque em <b>Configurações</b>.');
+      if (dados.adminPath === 'admin') avisos.push('⚠️ Seu painel está no endereço padrão <b>/admin</b>, fácil de adivinhar. Escolha um endereço secreto em <b>Configurações</b>.');
+      if (!dados.config.pixChave) avisos.push('⚠️ Cadastre sua <b>chave Pix</b> em Configurações. Sem ela, ninguém consegue comprar.');
+      $('#avisos').innerHTML = avisos.map(a => `<div class="aviso">${a}</div>`).join('');
+      desenharPedidos();
+      desenharSorteio();
+    }
+
+    // Abas
+    document.querySelectorAll('[data-aba]').forEach(b => b.onclick = () => {
+      document.querySelectorAll('[data-aba]').forEach(x => x.classList.toggle('ativa', x === b));
+      document.querySelectorAll('section[id^="aba-"]').forEach(s => s.classList.toggle('hidden', s.id !== 'aba-' + b.dataset.aba));
+      if (b.dataset.aba === 'sorteio') desenharRoleta();
+      if (b.dataset.aba === 'aparencia' && !$('#previa').src) $('#previa').src = '/';
+    });
+
+    // ---------- Pedidos ----------
+    function desenharPedidos() {
+      const c = dados.config, ps = dados.pedidos;
+      const pagos = ps.filter(p => p.status === 'pago'), pend = ps.filter(p => p.status === 'pendente');
+      const nPagos = pagos.reduce((s, p) => s + p.numeros.length, 0);
+      const nPend = pend.reduce((s, p) => s + p.numeros.length, 0);
+      $('#stats').innerHTML = [
+        [brl(pagos.reduce((s, p) => s + p.total, 0)), 'Arrecadado (confirmado)'],
+        [pend.length, 'Aguardando confirmação'],
+        [`${nPagos}/${c.quantidade}`, 'Números pagos'],
+        [nPend, 'Números reservados'],
+        [c.quantidade - nPagos - nPend, 'Disponíveis']
+      ].map(([v, t]) => `<div class="stat"><b>${v}</b><span>${t}</span></div>`).join('');
+
+      const f = $('#filtroStatus').value, q = $('#buscaPedido').value.trim().toLowerCase().replace('#', '');
+      const lista = ps.filter(p => (f === 'todos' || p.status === f) && (!q ||
+        p.nome.toLowerCase().includes(q) || p.telefone.includes(q.replace(/\D/g, '') || '§') ||
+        p.codigo.includes(q) || p.numeros.some(n => String(n) === q.replace(/^0+/, ''))));
+
+      $('#listaPedidos').innerHTML = lista.length ? lista.map(p => `
+        <div class="pedido-item">
+          <div class="cab">
+            <div><b>#${esc(p.codigo)} · ${esc(p.nome)}</b> <span class="tag tag-${p.status}">${STATUS_TXT[p.status]}</span></div>
+            <b style="color:var(--destaque);font-size:20px">${brl(p.total)}</b>
+          </div>
+          <div class="muted" style="font-size:14px;margin:4px 0 8px">
+            <a href="https://wa.me/55${esc(p.telefone)}" target="_blank" rel="noopener">${telefoneFmt(p.telefone)}</a> ·
+            ${new Date(p.criadoEm).toLocaleString('pt-BR')}
+            ${p.confirmadoEm ? ' · confirmado ' + new Date(p.confirmadoEm).toLocaleString('pt-BR') : ''}
+          </div>
+          <div class="nums-lista" style="margin-bottom:10px">${p.numeros.map(n => `<span>${pad(n, c.quantidade)}</span>`).join('')}</div>
+          <div class="linha">
+            ${p.status !== 'pago' ? `<button class="btn btn-verde btn-pq" data-acao="confirmar" data-id="${p.id}">✅ Confirmar pagamento</button>` : ''}
+            ${p.status === 'pendente' || p.status === 'pago' ? `<button class="btn btn-vermelho btn-pq" data-acao="cancelar" data-id="${p.id}">Cancelar</button>` : ''}
+            ${p.status === 'pago' ? `<button class="btn btn-pq" data-acao="pendente" data-id="${p.id}">Voltar p/ pendente</button>` : ''}
+            <a class="btn btn-pq" href="/pedido/${p.id}" target="_blank">Ver como comprador</a>
+          </div>
+        </div>`).join('') : '<p class="muted">Nenhum pedido aqui.</p>';
+    }
+    $('#filtroStatus').onchange = desenharPedidos;
+    $('#buscaPedido').oninput = desenharPedidos;
+    $('#listaPedidos').addEventListener('click', async e => {
+      const b = e.target.closest('[data-acao]');
+      if (!b) return;
+      const msgs = { confirmar: 'Confirmar que o Pix deste pedido caiu na sua conta?', cancelar: 'Cancelar este pedido e liberar os números?', pendente: 'Voltar este pedido para aguardando pagamento?' };
+      if (!confirm(msgs[b.dataset.acao])) return;
+      b.disabled = true;
+      try { await adm(`/api/admin/pedidos/${b.dataset.id}/${b.dataset.acao}`, { method: 'POST' }); await recarregar(); }
+      catch (err) { alert(err.message); b.disabled = false; }
+    });
+
+    // ---------- Configurações ----------
+    function preencherConfig() {
+      const f = $('#configForm'), c = dados.config;
+      for (const k of ['titulo', 'premio', 'descricao', 'quantidade', 'pixChave', 'pixNome', 'pixCidade', 'reservaMinutos', 'dataSorteio']) f[k].value = c[k] ?? '';
+      f.preco.value = Number(c.preco).toFixed(2).replace('.', ',');
+      f.whatsapp.value = telefoneFmt(c.whatsapp);
+      $('#enderecoBase').textContent = location.origin + '/';
+      $('#endereco').value = dados.adminPath;
+      preencherAparencia();
+      desenharFotos();
+    }
+    mascaraTelefone($('#configForm').whatsapp);
+    $('#configForm').onsubmit = async e => {
+      e.preventDefault();
+      const corpo = Object.fromEntries(new FormData(e.target));
+      try {
+        await adm('/api/admin/config', { method: 'PUT', body: JSON.stringify(corpo) });
+        $('#configMsg').innerHTML = '<div class="ok">Configurações salvas!</div>';
+        await recarregar();
+      } catch (err) { $('#configMsg').innerHTML = `<div class="erro">${esc(err.message)}</div>`; }
+      setTimeout(() => $('#configMsg').innerHTML = '', 4000);
+    };
+    function desenharFotos() {
+      const fotos = dados.config.fotos || [];
+      $('#fotosLista').innerHTML = fotos.length ? fotos.map((f, i) => `<div class="foto-item">
+          <img src="${esc(f)}" alt="Foto ${i + 1}">${i === 0 ? '<span class="capa">CAPA</span>' : ''}
+          <div class="acoes">
+            <button type="button" data-mover="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''} aria-label="Mover para a esquerda">◀</button>
+            <button type="button" class="del" data-remover="${i}" aria-label="Remover">✕</button>
+            <button type="button" data-mover="${i}" data-dir="1" ${i === fotos.length - 1 ? 'disabled' : ''} aria-label="Mover para a direita">▶</button>
+          </div></div>`).join('') : '<p class="muted">Nenhuma foto ainda.</p>';
+    }
+    async function salvarOrdem(lista) {
+      try {
+        const r = await adm('/api/admin/fotos', { method: 'PUT', body: JSON.stringify({ fotos: lista }) });
+        dados.config.fotos = r.fotos; desenharFotos();
+      } catch (err) { $('#fotoMsg').innerHTML = `<div class="erro">${esc(err.message)}</div>`; }
+    }
+    $('#fotosLista').addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      const lista = [...dados.config.fotos];
+      if (b.dataset.remover !== undefined) {
+        if (!confirm('Remover esta foto?')) return;
+        lista.splice(Number(b.dataset.remover), 1);
+      } else {
+        const i = Number(b.dataset.mover), j = i + Number(b.dataset.dir);
+        [lista[i], lista[j]] = [lista[j], lista[i]];
+      }
+      salvarOrdem(lista);
+    });
+    $('#fotoInput').onchange = async () => {
+      const arqs = [...$('#fotoInput').files];
+      if (!arqs.length) return;
+      const fd = new FormData(); arqs.forEach(a => fd.append('fotos', a));
+      $('#fotoMsg').innerHTML = '<p class="muted">Enviando…</p>';
+      const r = await fetch('/api/admin/fotos', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+      const d = await r.json().catch(() => ({}));
+      $('#fotoInput').value = '';
+      if (!r.ok) { $('#fotoMsg').innerHTML = `<div class="erro">${esc(d.erro || 'Falha no envio.')}</div>`; return; }
+      dados.config.fotos = d.fotos; desenharFotos();
+      $('#fotoMsg').innerHTML = `<div class="ok">${arqs.length > 1 ? 'Fotos adicionadas!' : 'Foto adicionada!'}${d.aviso ? ' ' + esc(d.aviso) : ''}</div>`;
+      setTimeout(() => $('#fotoMsg').innerHTML = '', 4000);
+    };
+    $('#senhaForm').onsubmit = async e => {
+      e.preventDefault();
+      try {
+        await adm('/api/admin/senha', { method: 'POST', body: JSON.stringify({ senha: $('#novaSenha').value }) });
+        $('#senhaMsg').innerHTML = '<div class="ok">Senha alterada!</div>'; $('#novaSenha').value = '';
+        await recarregar();
+      } catch (err) { $('#senhaMsg').innerHTML = `<div class="erro">${esc(err.message)}</div>`; }
+    };
+
+    // ---------- Aparência ----------
+    function preencherAparencia() {
+      const f = $('#aparenciaForm'), a = dados.aparencia;
+      for (const [k, v] of Object.entries(a)) {
+        if (!f[k]) continue;
+        if (f[k].type === 'checkbox') f[k].checked = v; else f[k].value = v;
+      }
+    }
+    $('#aparenciaForm').onsubmit = async e => {
+      e.preventDefault();
+      const f = e.target, corpo = {};
+      for (const el of f.elements) if (el.name) corpo[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+      try {
+        await adm('/api/admin/aparencia', { method: 'PUT', body: JSON.stringify(corpo) });
+        $('#aparenciaMsg').innerHTML = '<div class="ok">Aparência salva! O site já está atualizado.</div>';
+        await recarregar(); $('#previa').src = '/?t=' + Date.now();
+      } catch (err) { $('#aparenciaMsg').innerHTML = `<div class="erro">${esc(err.message)}</div>`; }
+      setTimeout(() => $('#aparenciaMsg').innerHTML = '', 4000);
+    };
+    $('#aparenciaPadrao').onclick = async () => {
+      if (!confirm('Voltar todas as cores e textos para o padrão?')) return;
+      await adm('/api/admin/aparencia/padrao', { method: 'PUT' });
+      await recarregar(); preencherAparencia(); $('#previa').src = '/?t=' + Date.now();
+    };
+    $('#enderecoForm').onsubmit = async e => {
+      e.preventDefault();
+      try {
+        const r = await adm('/api/admin/endereco', { method: 'PUT', body: JSON.stringify({ endereco: $('#endereco').value }) });
+        $('#enderecoMsg').innerHTML = `<div class="ok">Pronto! Seu painel agora fica em <b>${esc(location.origin + '/' + r.endereco)}</b>. Salve esse link nos favoritos. Levando você para lá…</div>`;
+        setTimeout(() => location.href = '/' + r.endereco, 3500);
+      } catch (err) { $('#enderecoMsg').innerHTML = `<div class="erro">${esc(err.message)}</div>`; }
+    };
+
+    // ---------- Roleta ----------
+    const canvas = $('#roleta'), ctx = canvas.getContext('2d');
+    const CORES = ['#7c3aed', '#f59e0b', '#22c55e', '#ef4444', '#3b82f6', '#ec4899', '#14b8a6', '#eab308'];
+    let rotacao = 0, girando = false, numerosRoleta = [];
+
+    function numerosPagos() {
+      return dados.pedidos.filter(p => p.status === 'pago').flatMap(p => p.numeros).sort((a, b) => a - b);
+    }
+
+    function desenharSorteio() {
+      if (!girando) { numerosRoleta = numerosPagos(); desenharRoleta(); }
+      $('#sorteioInfo').textContent = `${numerosRoleta.length} números pagos participando.`;
+      $('#historico').innerHTML = dados.sorteios.length ? [...dados.sorteios].reverse().map(s => `
+        <div class="pedido-item"><div class="cab">
+          <b style="font-size:22px;color:var(--destaque)">${pad(s.numero, dados.config.quantidade)}</b>
+          <span class="muted">${new Date(s.data).toLocaleString('pt-BR')}</span></div>
+          <div>${esc(s.nome)} · <a href="https://wa.me/55${esc(s.telefone)}" target="_blank" rel="noopener">${telefoneFmt(s.telefone)}</a> · pedido #${esc(s.pedido)}</div>
+        </div>`).join('') : '<p class="muted">Nenhum sorteio realizado.</p>';
+    }
+
+    function desenharRoleta() {
+      const W = canvas.width, R = W / 2 - 10, cx = W / 2, cy = W / 2, n = numerosRoleta.length;
+      ctx.clearRect(0, 0, W, W);
+      ctx.save(); ctx.translate(cx, cy);
+      if (!n) {
+        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fillStyle = '#23244a'; ctx.fill();
+        ctx.fillStyle = '#a9aacb'; ctx.font = 'bold 36px system-ui'; ctx.textAlign = 'center';
+        ctx.fillText('Sem números pagos', 0, 12); ctx.restore(); return;
+      }
+      const seg = Math.PI * 2 / n;
+      const mostrarTexto = n <= 90;
+      const fonte = Math.max(14, Math.min(44, 900 / n + 10));
+      for (let i = 0; i < n; i++) {
+        const a = rotacao + i * seg;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, a, a + seg); ctx.closePath();
+        ctx.fillStyle = CORES[i % CORES.length]; ctx.fill();
+        if (n <= 200) { ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 2; ctx.stroke(); }
+        if (mostrarTexto) {
+          ctx.save(); ctx.rotate(a + seg / 2);
+          ctx.fillStyle = '#fff'; ctx.font = `bold ${fonte}px system-ui`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+          ctx.fillText(pad(numerosRoleta[i], dados.config.quantidade), R - 18, 0);
+          ctx.restore();
+        }
+      }
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.lineWidth = 12; ctx.strokeStyle = '#ffcc00'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, 60, 0, Math.PI * 2); ctx.fillStyle = '#0f1020'; ctx.fill();
+      ctx.lineWidth = 6; ctx.strokeStyle = '#ffcc00'; ctx.stroke();
+      ctx.fillStyle = '#ffcc00'; ctx.font = 'bold 34px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🎁', 0, 2);
+      ctx.restore();
+    }
+
+    // Índice do segmento que está embaixo do ponteiro (topo da roleta)
+    function indiceNoPonteiro() {
+      const seg = Math.PI * 2 / numerosRoleta.length;
+      const a = ((-Math.PI / 2 - rotacao) % (Math.PI * 2) + Math.PI * 4) % (Math.PI * 2);
+      return Math.floor(a / seg) % numerosRoleta.length;
+    }
+
+    $('#girarBtn').onclick = async () => {
+      if (girando) return;
+      numerosRoleta = numerosPagos();
+      $('#sorteioErro').innerHTML = '';
+      if (!numerosRoleta.length) { $('#sorteioErro').innerHTML = '<div class="erro">Confirme pelo menos um pagamento antes de sortear.</div>'; return; }
+      if (dados.sorteios.length && !confirm('Já existe um sorteio no histórico. Sortear de novo?')) return;
+      let r;
+      try { r = await adm('/api/admin/sorteio', { method: 'POST' }); }
+      catch (err) { $('#sorteioErro').innerHTML = `<div class="erro">${esc(err.message)}</div>`; return; }
+
+      girando = true; $('#girarBtn').disabled = true;
+      $('#vencedorInfo').innerHTML = ''; $('#giraTxt').textContent = 'Girando…';
+      const n = numerosRoleta.length, seg = Math.PI * 2 / n;
+      const alvo = numerosRoleta.indexOf(r.numero);
+      const folga = (Math.random() * 0.6 + 0.2) * seg;
+      let final = -Math.PI / 2 - alvo * seg - folga;
+      const voltas = 8 * Math.PI * 2;
+      while (final < rotacao + voltas) final += Math.PI * 2;
+      const inicio = rotacao, dur = 9000, t0 = performance.now();
+      const ease = t => 1 - Math.pow(1 - t, 4);
+
+      await new Promise(fim => {
+        function quadro(agora) {
+          const t = Math.min(1, (agora - t0) / dur);
+          rotacao = inicio + (final - inicio) * ease(t);
+          desenharRoleta();
+          $('#numeroAtual').textContent = pad(numerosRoleta[indiceNoPonteiro()], dados.config.quantidade);
+          t < 1 ? requestAnimationFrame(quadro) : fim();
+        }
+        requestAnimationFrame(quadro);
+      });
+
+      $('#giraTxt').textContent = '🎉 Número sorteado';
+      $('#numeroAtual').textContent = pad(r.numero, dados.config.quantidade);
+      $('#vencedorInfo').innerHTML = `<h2 style="margin:8px 0 4px">${esc(r.nome)}</h2>
+        <div class="muted">${telefoneFmt(r.telefone)} · pedido #${esc(r.pedido)}</div>
+        <a class="btn btn-verde" style="margin-top:12px" target="_blank" rel="noopener"
+           href="https://wa.me/55${esc(r.telefone)}?text=${encodeURIComponent(`Parabéns, ${r.nome.split(' ')[0]}! Seu número ${pad(r.numero, dados.config.quantidade)} foi o sorteado na rifa "${dados.config.titulo}"! 🎉`)}">💬 Avisar ganhador no WhatsApp</a>`;
+      girando = false; $('#girarBtn').disabled = false;
+      await recarregar();
+    };
+    $('#limparSorteios').onclick = async () => {
+      if (!confirm('Apagar o histórico de sorteios? O resultado some do site e as vendas são reabertas.')) return;
+      await adm('/api/admin/sorteios', { method: 'DELETE' }); await recarregar();
+    };
+
+    if (token) entrar().catch(() => sair());
+    setInterval(() => { if (token && !girando) recarregar().catch(() => {}); }, 20000);
+  </script>
+</body>
+</html>

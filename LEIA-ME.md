@@ -73,6 +73,7 @@ nesses casos defina `DATA_DIR` apontando para um disco permanente.
 | `DATA_DIR`    | `./data`    | Onde ficam o banco e as fotos          |
 | `ADMIN_SENHA` | `admin123`  | Senha inicial (até trocar pelo painel) |
 | `ADMIN_PATH`  | `admin`     | Força o endereço do painel (use se esquecer o seu) |
+| `RESETAR_SENHA` | (vazio)   | Qualquer valor apaga a senha trocada no painel e volta a valer `ADMIN_SENHA`. Remova depois de entrar |
 
 ## Observações
 

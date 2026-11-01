@@ -81,6 +81,12 @@ function carregar() {
 let db = carregar();
 // Versões antigas tinham uma foto só
 if (!db.config.fotos.length && db.config.foto) db.config.fotos = [db.config.foto];
+// RESETAR_SENHA no ambiente apaga a senha trocada pelo painel e volta a valer ADMIN_SENHA
+if (process.env.RESETAR_SENHA && db.senhaHash) {
+  db.senhaHash = null;
+  salvar();
+  console.log('Senha do painel resetada: vale a ADMIN_SENHA do ambiente. Remova RESETAR_SENHA depois de entrar.');
+}
 // ADMIN_PATH no ambiente sempre vence (serve para recuperar o painel se esquecer o endereço)
 if (process.env.ADMIN_PATH) db.adminPath = process.env.ADMIN_PATH;
 

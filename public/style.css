@@ -299,3 +299,120 @@ code { background: var(--card2); border-radius: 6px; padding: 1px 6px; font-size
   .aparencia-grid .previa-card { position: sticky; top: 12px; margin: 0; }
   .aparencia-grid .previa { height: calc(100vh - 170px); min-height: 520px; }
 }
+
+/* ---------- Fontes ---------- */
+body { font-family: var(--fonte-texto, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif); }
+.titulo, .premio, .preco, h1, h2, h3, .ganhador-publico .numero, .status-grande h2, .total-grande, .contagem-caixas b {
+  font-family: var(--fonte-titulo, inherit);
+}
+
+/* ---------- Estilos de fundo ---------- */
+body.fundo-liso { background: var(--bg); }
+body.fundo-pontos {
+  background-color: var(--bg);
+  background-image: radial-gradient(color-mix(in srgb, var(--texto) 12%, transparent) 1px, transparent 1.4px),
+    radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--roxo) 30%, transparent), transparent 55%);
+  background-size: 22px 22px, 100% 100%; background-attachment: fixed;
+}
+body.fundo-gradiente {
+  background: linear-gradient(125deg, var(--bg) 0%, color-mix(in srgb, var(--roxo) 32%, var(--bg)) 30%, var(--bg) 55%, color-mix(in srgb, var(--destaque) 18%, var(--bg)) 80%, var(--bg) 100%) fixed;
+  background-size: 300% 300%;
+}
+body.anim.fundo-gradiente { animation: fundo-mover 18s ease-in-out infinite; }
+@keyframes fundo-mover { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+/* ---------- Partículas ---------- */
+#particulas { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+#particulas span { position: absolute; bottom: -60px; opacity: .22; animation: subir linear infinite; filter: saturate(.9); }
+@keyframes subir { 0% { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: .22; } 90% { opacity: .22; } 100% { transform: translateY(-115vh) rotate(25deg); opacity: 0; } }
+.wrap { position: relative; z-index: 1; }
+
+/* ---------- Entrada suave e microinterações ---------- */
+.anim .revelar { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(.2, .8, .2, 1); }
+.anim .revelar.visivel { opacity: 1; transform: none; }
+.anim .hero { animation: entrar .8s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes entrar { from { opacity: 0; transform: translateY(14px) scale(.99); } to { opacity: 1; transform: none; } }
+.card { box-shadow: 0 1px 0 color-mix(in srgb, #fff 4%, transparent) inset, 0 18px 40px -24px rgba(0, 0, 0, .55); }
+.btn { transition: transform .15s ease, box-shadow .2s ease, filter .2s ease; }
+@media (hover: hover) { .btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); } }
+.btn:active:not(:disabled) { transform: scale(.98); }
+.anim .num.sel { animation: escolher .28s ease; }
+@keyframes escolher { 50% { transform: scale(1.12); } }
+.preco-box { position: relative; overflow: hidden; }
+.anim .preco-box::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .55) 48%, transparent 66%);
+  transform: translateX(-130%); animation: brilho-preco 4.5s ease-in-out infinite 1.2s;
+}
+@keyframes brilho-preco { 0%, 60% { transform: translateX(-130%); } 85%, 100% { transform: translateX(130%); } }
+.anim .barra-compra .btn-primario { animation: chamar 2.4s ease-in-out infinite; }
+@keyframes chamar { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--destaque) 55%, transparent); } 50% { box-shadow: 0 0 0 10px transparent; } }
+.anim .progresso > div { background-size: 200% 100%; background-image: linear-gradient(90deg, var(--verde), var(--destaque), var(--verde)); animation: correr 3s linear infinite; }
+@keyframes correr { to { background-position: -200% 0; } }
+
+/* ---------- Contagem regressiva ---------- */
+.contagem { margin-top: 18px; }
+.contagem-rot { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--suave); }
+.contagem-caixas { display: flex; gap: 8px; margin-top: 6px; }
+.contagem-caixas div { background: var(--card2); border: 1px solid var(--borda); border-radius: 12px; min-width: 62px; padding: 8px 6px; text-align: center; }
+.contagem-caixas b { display: block; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.contagem-caixas small { font-size: 11px; color: var(--suave); text-transform: uppercase; letter-spacing: .06em; }
+
+/* ---------- Selos de confiança ---------- */
+.selos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.selo { display: flex; gap: 10px; align-items: center; background: var(--card); border: 1px solid var(--borda); border-radius: 14px; padding: 12px 14px; }
+.selo span { font-size: 24px; }
+.selo b { display: block; font-size: 14px; }
+.selo small { color: var(--suave); font-size: 12px; }
+@media (max-width: 720px) { .selos { grid-template-columns: 1fr; gap: 8px; } .selo { padding: 10px 12px; } }
+
+/* ---------- Últimos compradores ---------- */
+.recente {
+  position: fixed; left: 16px; bottom: 16px; z-index: 25; display: flex; gap: 10px; align-items: center; max-width: min(320px, calc(100vw - 32px));
+  background: var(--card); color: var(--texto); border: 1px solid var(--borda); border-radius: 14px; padding: 10px 14px; font-size: 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .35); opacity: 0; transform: translateY(12px); transition: opacity .4s, transform .4s;
+}
+.recente.entra { opacity: 1; transform: none; }
+.recente.some { opacity: 0; transform: translateY(12px); }
+.recente small { color: var(--suave); }
+.recente-ico { font-size: 22px; }
+body.com-barra .recente { bottom: 96px; }
+
+/* ---------- Confete ---------- */
+.confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 90; }
+
+/* ---------- Temas claros ---------- */
+[data-claro] .card { box-shadow: 0 10px 30px -18px rgba(0, 0, 0, .25); }
+[data-claro] .erro { color: #991b1b; }
+[data-claro] .ok { color: #166534; }
+[data-claro] .aviso { color: #92400e; }
+[data-claro] .num { border-color: var(--borda); }
+[data-claro] .galeria .seta { background: rgba(255, 255, 255, .8); color: #222; }
+[data-claro] .copia { background: var(--card2); }
+[data-claro] input, [data-claro] textarea, [data-claro] select { background: #fff; }
+[data-claro] .barra-compra { box-shadow: 0 -10px 30px rgba(0, 0, 0, .12); }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim *, .anim *::after, body.anim { animation: none !important; transition: none !important; }
+  .anim .revelar { opacity: 1; transform: none; }
+}
+
+/* ---------- Admin: temas e fontes ---------- */
+.temas { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.tema-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px; border-radius: 14px; cursor: pointer;
+  background: var(--t-bg); color: var(--t-tx); border: 2px solid color-mix(in srgb, var(--t-tx) 18%, transparent); text-align: left; font-size: .95rem;
+  transition: transform .15s, box-shadow .15s, border-color .15s; }
+.tema-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(0,0,0,.3); }
+.tema-card.ativo { border-color: var(--t-dst); box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-dst) 45%, transparent); }
+.tema-emoji { font-size: 1.6rem; line-height: 1; }
+.tema-cores { display: flex; gap: 4px; }
+.tema-cores i { width: 16px; height: 16px; border-radius: 50%; background: var(--t-dst); }
+.tema-cores i:nth-child(2) { background: var(--t-pr); }
+.tema-cores i:nth-child(3) { background: var(--t-tx); }
+.fontes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.fonte-card { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 12px; border-radius: 12px; cursor: pointer; background: var(--card2); border: 2px solid transparent; color: var(--texto); }
+.fonte-card input { position: absolute; opacity: 0; pointer-events: none; }
+.fonte-card span { font-size: 1.3rem; font-weight: 700; }
+.fonte-card small { color: var(--suave); }
+.fonte-card:has(input:checked) { border-color: var(--destaque); }
+.fonte-card:has(input:focus-visible) { outline: 2px solid var(--destaque); outline-offset: 2px; }

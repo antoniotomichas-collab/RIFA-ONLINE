@@ -20,6 +20,15 @@ Site de rifa com pagamento exclusivo via Pix, painel do organizador e roleta de 
   e o `/admin` deixa de existir.
 - Aba **Aparência**: cores, textos, botão de compra, mensagens de pendente e
   confirmado, rodapé e o que aparece ou some no site, com pré-visualização.
+- **Temas prontos** por tipo de rifa: Padrão, Carro/Moto, Solidária/Saúde, Dinheiro/Pix,
+  Eletrônicos, Casa/Imóvel, Beleza, Religiosa/Igreja e Festa. Um clique preenche cores,
+  fonte, efeitos e textos; depois é só ajustar e salvar.
+- **Fontes**: Moderna, Clássica, Elegante, Forte, Divertida e Arredondada.
+- **Efeitos**: fundo com brilho, gradiente animado ou pontilhado, ícones do tema flutuando,
+  cartões que aparecem ao rolar, botão de compra pulsando, brilho no valor, contador de
+  vendidos animado, confete quando o pagamento é confirmado, selos de confiança, avisos de
+  compras recentes ("Maria S. garantiu 3 números") e contagem regressiva para o sorteio
+  (preencha "Dia e hora do sorteio" em Configurações).
 - **Dashboard**: arrecadado, valor a confirmar, vendas de hoje, números vendidos,
   compradores, gráfico de arrecadação por dia, últimos pagamentos e lista de compradores
 - Pedidos: confirmar pagamento, cancelar, voltar para pendente, resumo do arrecadado

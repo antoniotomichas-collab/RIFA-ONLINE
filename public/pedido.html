@@ -52,6 +52,8 @@
       };
       const st = p.ganhou ? 'ganhou' : p.status;
       const [icone, titulo, texto] = TELAS[st];
+      // Confete quando o pagamento é confirmado ou a pessoa ganhou (uma vez por tela)
+      if ((st === 'pago' || st === 'ganhou') && renderizar.confeteDe !== st && a.animacoes !== false) { renderizar.confeteDe = st; setTimeout(() => confete(st === 'ganhou' ? 5000 : 2600), 300); }
       let html = `<div class="status-grande st-${st}">
           <div class="icone">${icone}</div><h2>${esc(preencher(titulo, v))}</h2><p style="margin:0;white-space:pre-line">${esc(preencher(texto, v))}</p></div>
         <div class="card">

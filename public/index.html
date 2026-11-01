@@ -25,8 +25,15 @@
           <span class="preco-label" id="rotuloPreco">Valor por número</span>
           <span class="preco" id="preco"></span>
         </div>
+        <div class="contagem hidden" id="contagem" aria-live="off"></div>
         <div class="chips" id="chips"></div>
       </div>
+    </div>
+
+    <div class="selos hidden" id="selos">
+      <div class="selo"><span>🔒</span><div><b>Pagamento seguro</b><small>Pix direto para o organizador</small></div></div>
+      <div class="selo"><span>✅</span><div><b>Confirmação garantida</b><small>Você acompanha tudo pelo seu pedido</small></div></div>
+      <div class="selo"><span>🎯</span><div><b>Sorteio transparente</b><small>Resultado publicado no site</small></div></div>
     </div>
 
     <div class="card" id="meusPedidosCard">
@@ -66,6 +73,8 @@
 
     <p class="center muted" style="font-size:13px;white-space:pre-line" id="rodape"></p>
   </div>
+
+  <div class="recente hidden" id="recente" aria-live="polite"></div>
 
   <div class="barra-compra hidden" id="barraCompra">
     <div class="resumo"><span id="qtdSel">0 números</span><br><b id="totalSel">R$ 0,00</b></div>
@@ -135,7 +144,12 @@
       const vendidos = Object.values(ocupados).filter(s => s === 'pago').length;
       const reservados = Object.keys(ocupados).length - vendidos;
       $('#barra').style.width = (Object.keys(ocupados).length / rifa.quantidade * 100) + '%';
-      $('#vendidosTxt').textContent = `${vendidos} pagos · ${reservados} reservados · ${rifa.quantidade - vendidos - reservados} disponíveis`;
+      $('#vendidosTxt').innerHTML = `<b id="nVend">${vendidos}</b> pagos · ${reservados} reservados · ${rifa.quantidade - vendidos - reservados} disponíveis`;
+      contarAte($('#nVend'), vendidos);
+      $('#selos').classList.toggle('hidden', !a.mostrarSelos);
+      montarContagem(rifa.dataHora);
+      recentes = a.mostrarRecentes ? (d.recentes || []) : [];
+      revelarAoRolar('.wrap > .card, .selos');
 
       if (d.ganhador && a.mostrarGanhador) {
         $('#ganhador').classList.remove('hidden');
@@ -248,6 +262,39 @@
       for (const id of ids) { try { lista.push(await api('/api/pedidos/' + id)); } catch {} }
       $('#meusPedidosLocal').innerHTML = lista.length ? '<p class="muted" style="margin:8px 0">Pedidos feitos neste aparelho:</p>' + listaPedidos(lista) : '';
     }
+
+    // Contagem regressiva até o sorteio
+    let timerContagem;
+    function montarContagem(dataHora) {
+      clearInterval(timerContagem);
+      const alvo = dataHora ? new Date(dataHora).getTime() : 0;
+      const el = $('#contagem');
+      if (!alvo || alvo <= Date.now()) { el.classList.add('hidden'); return; }
+      el.classList.remove('hidden');
+      const tic = () => {
+        let s = Math.max(0, Math.floor((alvo - Date.now()) / 1000));
+        if (!s) { el.classList.add('hidden'); clearInterval(timerContagem); return; }
+        const p = [[Math.floor(s / 86400), 'dias'], [Math.floor(s % 86400 / 3600), 'horas'], [Math.floor(s % 3600 / 60), 'min'], [s % 60, 'seg']];
+        el.innerHTML = `<span class="contagem-rot">⏰ Sorteio em</span><div class="contagem-caixas">${p.map(([v, t]) => `<div><b>${String(v).padStart(2, '0')}</b><small>${t}</small></div>`).join('')}</div>`;
+      };
+      tic(); timerContagem = setInterval(tic, 1000);
+    }
+
+    // Últimos compradores aparecendo um de cada vez
+    let recentes = [], iRecente = 0;
+    function haQuanto(iso) {
+      const m = Math.max(1, Math.round((Date.now() - new Date(iso)) / 60000));
+      return m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} dia${m >= 2880 ? 's' : ''}`;
+    }
+    function mostrarRecente() {
+      const el = $('#recente');
+      if (!recentes.length || document.hidden) { el.classList.add('hidden'); return; }
+      const r = recentes[iRecente++ % recentes.length];
+      el.innerHTML = `<span class="recente-ico">🎟️</span><div><b>${esc(r.nome)}</b> garantiu ${r.qtd} número${r.qtd > 1 ? 's' : ''}<br><small>${haQuanto(r.quando)}</small></div>`;
+      el.classList.remove('hidden', 'some'); void el.offsetWidth; el.classList.add('entra');
+      setTimeout(() => { el.classList.remove('entra'); el.classList.add('some'); }, 4200);
+    }
+    setTimeout(() => { mostrarRecente(); setInterval(mostrarRecente, 7000); }, 3000);
 
     carregar().then(pedidosLocais).catch(e => { $('#titulo').textContent = e.message; });
     setInterval(() => carregar().catch(() => {}), 30000);

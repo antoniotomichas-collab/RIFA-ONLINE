@@ -31,7 +31,8 @@ const DB_INICIAL = {
     pixCidade: '',
     reservaMinutos: 60,
     whatsapp: '',
-    dataSorteio: ''
+    dataSorteio: '',
+    dataHora: ''
   },
   aparencia: {
     corFundo: '#0f1020',
@@ -60,6 +61,13 @@ const DB_INICIAL = {
     mostrarConsulta: true,
     mostrarGanhador: true,
     mostrarWhatsapp: true,
+    mostrarSelos: true,
+    mostrarRecentes: true,
+    fonte: 'moderna',
+    tema: 'padrao',
+    fundoEstilo: 'brilho',
+    particulas: false,
+    animacoes: true,
     efeitoFoto: 'cinema',
     transicaoFoto: 'esmaecer',
     intervaloFoto: 5
@@ -234,7 +242,7 @@ function configPublica() {
   const c = db.config;
   return {
     titulo: c.titulo, premio: c.premio, descricao: c.descricao, preco: c.preco,
-    quantidade: c.quantidade, foto: c.fotos[0] || '', fotos: c.fotos, whatsapp: c.whatsapp, dataSorteio: c.dataSorteio,
+    quantidade: c.quantidade, foto: c.fotos[0] || '', fotos: c.fotos, whatsapp: c.whatsapp, dataSorteio: c.dataSorteio, dataHora: c.dataHora,
     pixConfigurado: Boolean(c.pixChave),
     aparencia: db.aparencia
   };
@@ -259,9 +267,17 @@ app.get('/api/rifa', (req, res) => {
   res.json({
     config: configPublica(),
     ocupados: numerosOcupados(),
-    ganhador: ultimo ? { numero: ultimo.numero, nome: primeiroNome(ultimo.nome), data: ultimo.data } : null
+    ganhador: ultimo ? { numero: ultimo.numero, nome: primeiroNome(ultimo.nome), data: ultimo.data } : null,
+    // Prova social: últimos pagamentos confirmados, só com primeiro nome e inicial
+    recentes: db.pedidos.filter(p => p.status === 'pago').sort((a, b) => new Date(b.confirmadoEm || 0) - new Date(a.confirmadoEm || 0))
+      .slice(0, 8).map(p => ({ nome: nomeCurto(p.nome), qtd: p.numeros.length, quando: p.confirmadoEm || p.criadoEm }))
   });
 });
+
+function nomeCurto(nome) {
+  const partes = String(nome || '').trim().split(/\s+/);
+  return partes[0] + (partes.length > 1 ? ' ' + partes[partes.length - 1][0].toUpperCase() + '.' : '');
+}
 
 function primeiroNome(nome) {
   return String(nome || '').trim().split(/\s+/)[0] || '';
@@ -397,7 +413,8 @@ app.put('/api/admin/config', exigirAdmin, (req, res) => {
     pixCidade: String(b.pixCidade || '').slice(0, 40),
     reservaMinutos: Math.max(0, parseInt(b.reservaMinutos, 10) || 0),
     whatsapp: String(b.whatsapp || '').replace(/\D/g, '').slice(0, 13),
-    dataSorteio: String(b.dataSorteio || '').slice(0, 60)
+    dataSorteio: String(b.dataSorteio || '').slice(0, 60),
+    dataHora: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(b.dataHora || '') ? String(b.dataHora).slice(0, 16) : ''
   });
   salvar();
   res.json({ ok: true, config: c });
@@ -511,6 +528,17 @@ app.put('/api/admin/aparencia', exigirAdmin, (req, res) => {
       a[k] = b[k];
     }
   }
+  const OPCOES = {
+    fonte: ['moderna', 'classica', 'elegante', 'forte', 'divertida', 'arredondada'],
+    fundoEstilo: ['brilho', 'liso', 'gradiente', 'pontos'],
+    tema: ['padrao', 'carro', 'solidaria', 'dinheiro', 'eletronicos', 'casa', 'beleza', 'religiosa', 'festa']
+  };
+  for (const [k, lista] of Object.entries(OPCOES)) {
+    if (b[k] !== undefined) {
+      if (!lista.includes(b[k])) return res.status(400).json({ erro: 'Opção inválida: ' + k });
+      a[k] = b[k];
+    }
+  }
   if (b.efeitoFoto !== undefined) {
     if (!['cinema', 'zoom', 'brilho', 'flutuar', 'pulsar', 'nenhum'].includes(b.efeitoFoto)) return res.status(400).json({ erro: 'Efeito inválido.' });
     a.efeitoFoto = b.efeitoFoto;
@@ -521,7 +549,8 @@ app.put('/api/admin/aparencia', exigirAdmin, (req, res) => {
     'tituloPendente', 'tituloConfirmado', 'tituloGanhador', 'msgGanhador', 'tituloVoceGanhou', 'msgVoceGanhou', 'whatsObrigado', 'whatsGanhador']) {
     if (b[k] !== undefined) a[k] = String(b[k]).slice(0, 500);
   }
-  for (const k of ['mostrarProgresso', 'mostrarContagem', 'mostrarAleatorio', 'mostrarConsulta', 'mostrarGanhador', 'mostrarWhatsapp']) {
+  for (const k of ['mostrarProgresso', 'mostrarContagem', 'mostrarAleatorio', 'mostrarConsulta', 'mostrarGanhador', 'mostrarWhatsapp',
+    'mostrarSelos', 'mostrarRecentes', 'particulas', 'animacoes']) {
     if (b[k] !== undefined) a[k] = Boolean(b[k]);
   }
   salvar();

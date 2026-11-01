@@ -118,6 +118,7 @@
             <div><label>Valor de cada número (R$)</label><input name="preco" inputmode="decimal" required></div>
             <div><label>Quantidade de números</label><input name="quantidade" type="number" min="1" max="100000" required></div>
             <div><label>Data do sorteio (texto livre)</label><input name="dataSorteio" placeholder="Ex: 20/12 às 20h pela Loteria Federal"></div>
+            <div><label>Dia e hora do sorteio (mostra contagem regressiva)</label><input name="dataHora" type="datetime-local"></div>
             <div><label>Seu WhatsApp (para receber comprovantes)</label><input name="whatsapp" type="tel" placeholder="(11) 91234-5678"></div>
             <div><label>Prazo para pagar (minutos, 0 = sem prazo)</label><input name="reservaMinutos" type="number" min="0"></div>
           </div>
@@ -169,7 +170,30 @@
       <!-- Aparência -->
       <section id="aba-aparencia" class="hidden aparencia-grid">
         <form id="aparenciaForm" class="card">
-          <h3>Cores</h3>
+          <h3>Tema pronto para o tipo de rifa</h3>
+          <p class="muted" style="margin-top:0">Escolha um tema e ele preenche cores, fonte, efeitos e textos. Depois ajuste o que quiser e clique em Salvar.</p>
+          <input type="hidden" name="tema">
+          <div class="temas" id="temas"></div>
+
+          <h3 style="margin-top:24px">Fonte</h3>
+          <div class="fontes" id="fontes"></div>
+
+          <h3 style="margin-top:24px">Efeitos do site</h3>
+          <div class="grid2">
+            <div><label>Estilo do fundo</label>
+              <select name="fundoEstilo">
+                <option value="brilho">✨ Brilho suave</option>
+                <option value="gradiente">🌈 Gradiente animado</option>
+                <option value="pontos">🔹 Pontilhado</option>
+                <option value="liso">Liso</option>
+              </select></div>
+          </div>
+          <label class="chk"><input type="checkbox" name="animacoes"> Animações (entrada suave, botão pulsando, brilho no valor, confete na confirmação)</label>
+          <label class="chk"><input type="checkbox" name="particulas"> Ícones do tema flutuando no fundo</label>
+          <label class="chk"><input type="checkbox" name="mostrarSelos"> Selos de confiança (Pix seguro, confirmação manual, sorteio transparente)</label>
+          <label class="chk"><input type="checkbox" name="mostrarRecentes"> Avisos de compras recentes ("Maria S. garantiu 3 números")</label>
+
+          <h3 style="margin-top:24px">Cores</h3>
           <div class="cores">
             <label class="cor"><input type="color" name="corFundo"> Fundo</label>
             <label class="cor"><input type="color" name="corTexto"> Texto</label>
@@ -506,7 +530,7 @@
     // ---------- Configurações ----------
     function preencherConfig() {
       const f = $('#configForm'), c = dados.config;
-      for (const k of ['titulo', 'premio', 'descricao', 'quantidade', 'pixChave', 'pixNome', 'pixCidade', 'reservaMinutos', 'dataSorteio']) f[k].value = c[k] ?? '';
+      for (const k of ['titulo', 'premio', 'descricao', 'quantidade', 'pixChave', 'pixNome', 'pixCidade', 'reservaMinutos', 'dataSorteio', 'dataHora']) f[k].value = c[k] ?? '';
       f.preco.value = Number(c.preco).toFixed(2).replace('.', ',');
       f.whatsapp.value = telefoneFmt(c.whatsapp);
       $('#enderecoBase').textContent = location.origin + '/';
@@ -595,13 +619,44 @@
       const f = $('#aparenciaForm'), a = dados.aparencia;
       for (const [k, v] of Object.entries(a)) {
         if (!f[k]) continue;
-        if (f[k].type === 'checkbox') f[k].checked = v; else f[k].value = v;
+        if (f[k] instanceof RadioNodeList) f[k].value = v;
+        else if (f[k].type === 'checkbox') f[k].checked = v; else f[k].value = v;
       }
+      marcarTema();
+    }
+    // Temas prontos e fontes
+    (function () {
+      const link = document.createElement('link'); link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?' + [...new Set(Object.values(FONTES).flatMap(f => f.css.split('&')))].join('&') + '&display=swap';
+      document.head.appendChild(link);
+      $('#temas').innerHTML = Object.entries(TEMAS).map(([id, t]) => {
+        const v = t.valores;
+        return `<button type="button" class="tema-card" data-tema="${id}" style="--t-bg:${v.corFundo};--t-tx:${v.corTexto};--t-dst:${v.corDestaque};--t-pr:${v.corPremio};font-family:'${FONTES[v.fonte].titulo}'">
+          <span class="tema-emoji">${t.emoji}</span><b>${esc(t.nome)}</b><span class="tema-cores"><i></i><i></i><i></i></span></button>`;
+      }).join('');
+      $('#fontes').innerHTML = Object.entries(FONTES).map(([id, f]) => `<label class="fonte-card">
+          <input type="radio" name="fonte" value="${id}"><span style="font-family:'${f.titulo}'">${esc(f.nome)}</span>
+          <small style="font-family:'${f.texto}'">Aa Bb 123 · ${esc(f.titulo)}</small></label>`).join('');
+      $('#temas').addEventListener('click', e => {
+        const b = e.target.closest('[data-tema]'); if (!b) return;
+        const f = $('#aparenciaForm'), t = TEMAS[b.dataset.tema];
+        f.tema.value = b.dataset.tema;
+        for (const [k, v] of Object.entries(t.valores)) {
+          if (!f[k]) continue;
+          if (f[k] instanceof RadioNodeList) f[k].value = v; else if (f[k].type === 'checkbox') f[k].checked = v; else f[k].value = v;
+        }
+        marcarTema(); enviarPrevia();
+        $('#aparenciaMsg').innerHTML = `<div class="ok">Tema ${esc(t.nome)} aplicado na prévia. Clique em Salvar para publicar.</div>`;
+      });
+    })();
+    function marcarTema() {
+      const t = $('#aparenciaForm').tema.value;
+      document.querySelectorAll('.tema-card').forEach(b => b.classList.toggle('ativo', b.dataset.tema === t));
     }
     $('#aparenciaForm').onsubmit = async e => {
       e.preventDefault();
       const f = e.target, corpo = {};
-      for (const el of f.elements) if (el.name) corpo[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+      for (const el of f.elements) if (el.name && !(el.type === 'radio' && !el.checked)) corpo[el.name] = el.type === 'checkbox' ? el.checked : el.value;
       try {
         await adm('/api/admin/aparencia', { method: 'PUT', body: JSON.stringify(corpo) });
         $('#aparenciaMsg').innerHTML = '<div class="ok">Aparência salva! O site já está atualizado.</div>';
@@ -620,7 +675,7 @@
     const URL_PREVIA = { site: '/', ganhador: '/?previa=ganhador', pendente: '/pedido/previa-pendente', pago: '/pedido/previa-pago', ganhou: '/pedido/previa-ganhou' };
     function aparenciaDoFormulario() {
       const a = {};
-      for (const el of $('#aparenciaForm').elements) if (el.name) a[el.name] = el.type === 'checkbox' ? el.checked : (el.type === 'number' ? Number(el.value) : el.value);
+      for (const el of $('#aparenciaForm').elements) if (el.name && !(el.type === 'radio' && !el.checked)) a[el.name] = el.type === 'checkbox' ? el.checked : (el.type === 'number' ? Number(el.value) : el.value);
       return a;
     }
     function enviarPrevia() {

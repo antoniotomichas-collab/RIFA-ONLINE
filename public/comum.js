@@ -133,3 +133,168 @@ window.addEventListener('message', e => {
   if (typeof aoMudarPrevia === 'function') aoMudarPrevia();
 });
 const comPrevia = a => ({ ...a, ...(previaAparencia || {}) });
+
+// ---------- Fontes e temas prontos ----------
+const FONTES = {
+  moderna: { nome: 'Moderna', titulo: 'Poppins', texto: 'Inter', css: 'family=Poppins:wght@600;800;900&family=Inter:wght@400;600;700' },
+  classica: { nome: 'Clássica', titulo: 'Playfair Display', texto: 'Lora', css: 'family=Playfair+Display:wght@700;900&family=Lora:wght@400;600;700' },
+  elegante: { nome: 'Elegante', titulo: 'Cormorant Garamond', texto: 'Montserrat', css: 'family=Cormorant+Garamond:wght@600;700&family=Montserrat:wght@400;600;700' },
+  forte: { nome: 'Forte', titulo: 'Oswald', texto: 'Roboto', css: 'family=Oswald:wght@500;700&family=Roboto:wght@400;500;700' },
+  divertida: { nome: 'Divertida', titulo: 'Fredoka', texto: 'Nunito', css: 'family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;800' },
+  arredondada: { nome: 'Arredondada', titulo: 'Nunito', texto: 'Nunito', css: 'family=Nunito:wght@400;600;800;900' }
+};
+
+const TEMAS = {
+  padrao: { nome: 'Padrão', emoji: '🎟️', particulas: ['🎟️', '⭐', '✨'], valores: {
+    corFundo: '#0f1020', corTexto: '#f4f4ff', corDestaque: '#ffcc00', corPremio: '#ffb703', corSecundaria: '#7c3aed',
+    fonte: 'moderna', fundoEstilo: 'brilho', efeitoFoto: 'cinema', particulas: false,
+    rotuloPremio: '🏆 Prêmio', rotuloPreco: 'Valor por número', textoBotao: 'Comprar com Pix', tituloNumeros: 'Escolha seus números' } },
+  carro: { nome: 'Carro / Moto', emoji: '🏎️', particulas: ['🏁', '🔑', '⚡'], valores: {
+    corFundo: '#0b0b0f', corTexto: '#f5f5f5', corDestaque: '#e10600', corPremio: '#ffffff', corSecundaria: '#e10600',
+    fonte: 'forte', fundoEstilo: 'gradiente', efeitoFoto: 'cinema', particulas: true,
+    rotuloPremio: '🏁 Concorra a', rotuloPreco: 'Valor por número', textoBotao: 'Quero acelerar! 🏎️', tituloNumeros: 'Escolha seus números da sorte' } },
+  solidaria: { nome: 'Solidária / Saúde', emoji: '💗', particulas: ['💗', '🤍', '🙏'], valores: {
+    corFundo: '#fdf7f9', corTexto: '#3b2a33', corDestaque: '#e11d74', corPremio: '#be185d', corSecundaria: '#0ea5a4',
+    fonte: 'arredondada', fundoEstilo: 'brilho', efeitoFoto: 'flutuar', particulas: true,
+    rotuloPremio: '💗 Ajude e concorra a', rotuloPreco: 'Sua ajuda por número', textoBotao: 'Quero ajudar 💗', tituloNumeros: 'Escolha seus números e ajude',
+    msgConfirmado: 'Muito obrigado, {nome}! 💗 Sua ajuda faz toda a diferença. Seus números {numeros} estão garantidos.',
+    rodape: 'Toda a renda desta rifa é destinada ao tratamento. Pagamento via Pix com confirmação pelo organizador.' } },
+  dinheiro: { nome: 'Dinheiro / Pix', emoji: '💰', particulas: ['💰', '💵', '🪙'], valores: {
+    corFundo: '#04150d', corTexto: '#ecfdf5', corDestaque: '#22c55e', corPremio: '#facc15', corSecundaria: '#16a34a',
+    fonte: 'forte', fundoEstilo: 'pontos', efeitoFoto: 'brilho', particulas: true,
+    rotuloPremio: '💰 Prêmio em dinheiro', rotuloPreco: 'Valor por número', textoBotao: 'Quero ganhar! 💸', tituloNumeros: 'Escolha seus números' } },
+  eletronicos: { nome: 'Eletrônicos', emoji: '📱', particulas: ['⚡', '✨', '📱'], valores: {
+    corFundo: '#050816', corTexto: '#e6f1ff', corDestaque: '#22d3ee', corPremio: '#a78bfa', corSecundaria: '#6366f1',
+    fonte: 'moderna', fundoEstilo: 'gradiente', efeitoFoto: 'brilho', particulas: true,
+    rotuloPremio: '⚡ Concorra a', rotuloPreco: 'Valor por número', textoBotao: 'Garantir meus números', tituloNumeros: 'Escolha seus números' } },
+  casa: { nome: 'Casa / Imóvel', emoji: '🏡', particulas: ['🔑', '🏡'], valores: {
+    corFundo: '#f7f5f0', corTexto: '#2b2620', corDestaque: '#b45309', corPremio: '#92400e', corSecundaria: '#166534',
+    fonte: 'classica', fundoEstilo: 'liso', efeitoFoto: 'cinema', particulas: false,
+    rotuloPremio: '🏡 Concorra a', rotuloPreco: 'Valor por número', textoBotao: 'Quero a minha chave 🔑', tituloNumeros: 'Escolha seus números' } },
+  beleza: { nome: 'Beleza / Feminino', emoji: '🌸', particulas: ['🌸', '✨', '💖'], valores: {
+    corFundo: '#fff5f8', corTexto: '#4a2c3a', corDestaque: '#db2777', corPremio: '#c026d3', corSecundaria: '#f472b6',
+    fonte: 'elegante', fundoEstilo: 'brilho', efeitoFoto: 'zoom', particulas: true,
+    rotuloPremio: '🌸 Concorra a', rotuloPreco: 'Valor por número', textoBotao: 'Quero participar 💖', tituloNumeros: 'Escolha seus números' } },
+  religiosa: { nome: 'Religiosa / Igreja', emoji: '🙏', particulas: ['🕊️', '✨'], valores: {
+    corFundo: '#fbf8f1', corTexto: '#2f2a22', corDestaque: '#b8860b', corPremio: '#1e3a8a', corSecundaria: '#1e3a8a',
+    fonte: 'classica', fundoEstilo: 'brilho', efeitoFoto: 'cinema', particulas: false,
+    rotuloPremio: '🙏 Rifa beneficente', rotuloPreco: 'Colaboração por número', textoBotao: 'Quero colaborar 🙏', tituloNumeros: 'Escolha seus números',
+    msgConfirmado: 'Deus abençoe, {nome}! 🙏 Sua colaboração foi recebida. Seus números {numeros} estão garantidos.' } },
+  festa: { nome: 'Festa / Evento', emoji: '🎉', particulas: ['🎉', '🎈', '✨'], valores: {
+    corFundo: '#1a0b2e', corTexto: '#fff7ff', corDestaque: '#f97316', corPremio: '#facc15', corSecundaria: '#ec4899',
+    fonte: 'divertida', fundoEstilo: 'gradiente', efeitoFoto: 'pulsar', particulas: true,
+    rotuloPremio: '🎉 Concorra a', rotuloPreco: 'Valor por número', textoBotao: 'Bora participar! 🎉', tituloNumeros: 'Escolha seus números' } }
+};
+
+// Textos que alguns temas trocam; os outros temas voltam a estes
+const TEXTOS_TEMA_PADRAO = {
+  msgConfirmado: 'Obrigado pela compra, {nome}! Seus números {numeros} estão garantidos. Boa sorte! 🍀',
+  rodape: 'Pagamento exclusivo via Pix. Seus números são confirmados após a verificação do pagamento pelo organizador.'
+};
+for (const t of Object.values(TEMAS)) t.valores = { ...TEXTOS_TEMA_PADRAO, ...t.valores };
+
+function carregarFonte(id) {
+  const f = FONTES[id] || FONTES.moderna;
+  let link = document.getElementById('fonte-link');
+  const href = `https://fonts.googleapis.com/css2?${f.css}&display=swap`;
+  if (!link) { link = document.createElement('link'); link.id = 'fonte-link'; link.rel = 'stylesheet'; document.head.appendChild(link); }
+  if (link.href !== href) link.href = href;
+  return f;
+}
+
+const luminancia = hex => { const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+
+// Aparência completa do site público: fonte, fundo claro/escuro, estilo de fundo, partículas e animações
+(function () {
+  const base = aplicarAparencia;
+  aplicarAparencia = function (a) {
+    base(a);
+    if (!a) return;
+    const st = document.documentElement.style, raiz = document.documentElement;
+    const f = carregarFonte(a.fonte);
+    st.setProperty('--fonte-titulo', `'${f.titulo}', system-ui, sans-serif`);
+    st.setProperty('--fonte-texto', `'${f.texto}', system-ui, sans-serif`);
+    const claro = luminancia(a.corFundo || '#000000') > 0.6;
+    raiz.toggleAttribute('data-claro', claro);
+    for (const [k, v] of Object.entries({
+      '--card': claro ? '#ffffff' : '', '--card2': claro ? 'color-mix(in srgb, var(--bg), #000 6%)' : '',
+      '--borda': claro ? 'color-mix(in srgb, var(--bg), #000 14%)' : '', '--suave': claro ? 'color-mix(in srgb, var(--texto) 62%, var(--bg))' : ''
+    })) v ? st.setProperty(k, v) : st.removeProperty(k);
+    const body = document.body;
+    if (!body) return;
+    body.classList.remove('fundo-brilho', 'fundo-liso', 'fundo-gradiente', 'fundo-pontos');
+    body.classList.add('fundo-' + (a.fundoEstilo || 'brilho'));
+    body.classList.toggle('anim', a.animacoes !== false);
+    montarParticulas(a.particulas && a.animacoes !== false ? (TEMAS[a.tema] || TEMAS.padrao).particulas : null);
+  };
+})();
+
+function montarParticulas(emojis) {
+  let c = document.getElementById('particulas');
+  const chave = emojis ? emojis.join('') : '';
+  if (c && c.dataset.chave === chave) return;
+  if (c) c.remove();
+  if (!emojis || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  c = document.createElement('div');
+  c.id = 'particulas'; c.dataset.chave = chave; c.setAttribute('aria-hidden', 'true');
+  const qtd = innerWidth < 640 ? 10 : 18;
+  for (let i = 0; i < qtd; i++) {
+    const s = document.createElement('span');
+    s.textContent = emojis[i % emojis.length];
+    s.style.left = Math.random() * 100 + '%';
+    s.style.fontSize = 14 + Math.random() * 22 + 'px';
+    s.style.animationDuration = 14 + Math.random() * 16 + 's';
+    s.style.animationDelay = -Math.random() * 30 + 's';
+    c.appendChild(s);
+  }
+  document.body.prepend(c);
+}
+
+// Cartões aparecem suavemente ao rolar a página
+function revelarAoRolar(seletor) {
+  if (!document.body.classList.contains('anim') || !('IntersectionObserver' in window)) return;
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visivel'); io.unobserve(e.target); } }), { threshold: 0.08 });
+  document.querySelectorAll(seletor).forEach(el => { if (!el.classList.contains('visivel')) { el.classList.add('revelar'); io.observe(el); } });
+}
+
+// Confete simples em canvas
+function confete(duracao = 2600) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cv = document.createElement('canvas');
+  cv.className = 'confete'; document.body.appendChild(cv);
+  const ctx = cv.getContext('2d'), dpr = devicePixelRatio || 1;
+  const ajustar = () => { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; };
+  ajustar();
+  const cs = getComputedStyle(document.documentElement);
+  const cores = ['--destaque', '--roxo', '--verde', '--premio'].map(v => cs.getPropertyValue(v).trim() || '#ffcc00');
+  const pecas = Array.from({ length: 140 }, () => ({
+    x: Math.random() * cv.width, y: -Math.random() * cv.height * 0.5, w: (6 + Math.random() * 6) * dpr, h: (8 + Math.random() * 8) * dpr,
+    vx: (Math.random() - 0.5) * 3 * dpr, vy: (2 + Math.random() * 4) * dpr, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3,
+    cor: cores[Math.floor(Math.random() * cores.length)]
+  }));
+  const t0 = performance.now();
+  (function quadro(t) {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    const fim = t - t0 > duracao;
+    let vivas = 0;
+    for (const p of pecas) {
+      p.x += p.vx; p.y += p.vy; p.r += p.vr; p.vy += 0.04 * dpr;
+      if (p.y < cv.height + 20) vivas++;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.cor; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
+      if (!fim && p.y > cv.height + 20) { p.y = -20; p.x = Math.random() * cv.width; p.vy = (2 + Math.random() * 4) * dpr; }
+    }
+    vivas ? requestAnimationFrame(quadro) : cv.remove();
+  })(t0);
+}
+
+// Número que sobe de 0 até o valor
+function contarAte(el, valor, formato = v => Math.round(v).toLocaleString('pt-BR')) {
+  if (!document.body.classList.contains('anim') || el.dataset.contado) { el.textContent = formato(valor); return; }
+  el.dataset.contado = '1';
+  const t0 = performance.now(), dur = 1100;
+  (function passo(t) {
+    const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = formato(valor * e);
+    if (k < 1) requestAnimationFrame(passo);
+  })(t0);
+}

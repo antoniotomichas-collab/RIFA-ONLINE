@@ -15,8 +15,6 @@ services:
         value: "20"
       - key: DATA_DIR
         value: /var/data
-      - key: ADMIN_SENHA
-        sync: false
     disk:
       name: dados-rifa
       mountPath: /var/data

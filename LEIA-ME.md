@@ -33,8 +33,13 @@ Site de rifa com pagamento exclusivo via Pix, painel do organizador e roleta de 
 - Roleta: gira com animação entre os números pagos. O número é escolhido pelo
   servidor com sorteio aleatório seguro, e a roleta só para em cima dele.
 
-Senha inicial do admin: **admin123** (troque no primeiro acesso, em Configurações).
-Você também pode definir pela variável de ambiente `ADMIN_SENHA`.
+**Login do painel:** e-mail **admin@rifa.com** e senha **admin123**. No primeiro acesso o
+painel pede para você criar o seu próprio e-mail e senha. Depois dá para trocar em
+Configurações > Acesso ao painel. Após 10 tentativas erradas o login fica bloqueado
+por 15 minutos.
+
+Esqueceu o acesso? No Render, adicione a variável `RESETAR_SENHA` com qualquer valor,
+salve, entre com o acesso padrão acima e depois apague a variável.
 
 ## Rodar no computador
 
@@ -53,8 +58,7 @@ O repositório já tem o arquivo `render.yaml`, que configura tudo sozinho.
 
 1. Entre em https://dashboard.render.com e conecte sua conta do GitHub.
 2. Clique em **New > Blueprint** e escolha o repositório `RIFA-ONLINE`.
-3. O Render pede o valor de `ADMIN_SENHA`: digite a senha que você quer para o painel.
-4. Clique em **Apply**. Em poucos minutos o site fica no ar em `https://rifa-online-XXXX.onrender.com`.
+3. Clique em **Apply**. Em poucos minutos o site fica no ar em `https://rifa-online-XXXX.onrender.com`.
 
 Toda atualização enviada para a branch `main` do GitHub é publicada automaticamente.
 
@@ -71,9 +75,8 @@ nesses casos defina `DATA_DIR` apontando para um disco permanente.
 |---------------|-------------|----------------------------------------|
 | `PORT`        | `3000`      | Porta do servidor                      |
 | `DATA_DIR`    | `./data`    | Onde ficam o banco e as fotos          |
-| `ADMIN_SENHA` | `admin123`  | Senha inicial (até trocar pelo painel) |
 | `ADMIN_PATH`  | `admin`     | Força o endereço do painel (use se esquecer o seu) |
-| `RESETAR_SENHA` | (vazio)   | Qualquer valor apaga a senha trocada no painel e volta a valer `ADMIN_SENHA`. Remova depois de entrar |
+| `RESETAR_SENHA` | (vazio)   | Qualquer valor volta o login para admin@rifa.com / admin123. Remova depois de entrar |
 
 ## Observações
 

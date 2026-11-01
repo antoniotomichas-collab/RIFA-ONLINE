@@ -9,7 +9,9 @@ const PORT = process.env.PORT || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
-const SENHA_PADRAO = process.env.ADMIN_SENHA || 'admin123';
+// Acesso padrão do painel: vale até o organizador criar o seu no primeiro login
+const EMAIL_PADRAO = 'admin@rifa.com';
+const SENHA_PADRAO = 'admin123';
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -81,11 +83,15 @@ function carregar() {
 let db = carregar();
 // Versões antigas tinham uma foto só
 if (!db.config.fotos.length && db.config.foto) db.config.fotos = [db.config.foto];
-// RESETAR_SENHA no ambiente apaga a senha trocada pelo painel e volta a valer ADMIN_SENHA
-if (process.env.RESETAR_SENHA && db.senhaHash) {
-  db.senhaHash = null;
+// Volta o login para o acesso padrão: uma vez ao atualizar para o login com e-mail,
+// ou sempre que RESETAR_SENHA estiver definida no ambiente
+if (db.credVersao !== 2 || process.env.RESETAR_SENHA) {
+  db.adminEmail = EMAIL_PADRAO;
+  db.senhaHash = hashSenha(SENHA_PADRAO);
+  db.deveTrocar = true;
+  db.credVersao = 2;
   salvar();
-  console.log('Senha do painel resetada: vale a ADMIN_SENHA do ambiente. Remova RESETAR_SENHA depois de entrar.');
+  console.log(`Acesso do painel resetado: ${EMAIL_PADRAO} / ${SENHA_PADRAO}.` + (process.env.RESETAR_SENHA ? ' Remova RESETAR_SENHA depois de entrar.' : ''));
 }
 // ADMIN_PATH no ambiente sempre vence (serve para recuperar o painel se esquecer o endereço)
 if (process.env.ADMIN_PATH) db.adminPath = process.env.ADMIN_PATH;
@@ -169,8 +175,8 @@ function hashSenha(senha, salt = crypto.randomBytes(16).toString('hex')) {
   return salt + ':' + crypto.scryptSync(senha, salt, 64).toString('hex');
 }
 
-function senhaConfere(senha) {
-  if (!db.senhaHash) return senha === SENHA_PADRAO;
+function senhaConfere(email, senha) {
+  if (!db.senhaHash || email.trim().toLowerCase() !== String(db.adminEmail || '').toLowerCase()) return false;
   const [salt, hash] = db.senhaHash.split(':');
   const teste = crypto.scryptSync(senha, salt, 64).toString('hex');
   return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(teste, 'hex'));
@@ -340,11 +346,20 @@ app.get('/api/consulta', (req, res) => {
 
 // ---------- Rotas do admin ----------
 
+// Limite de tentativas por IP: 10 erros em 15 minutos
+const tentativas = new Map();
 app.post('/api/admin/login', (req, res) => {
-  if (!senhaConfere(String(req.body.senha || ''))) return res.status(401).json({ erro: 'Senha incorreta.' });
+  const ip = req.ip, agora = Date.now();
+  const t = (tentativas.get(ip) || []).filter(x => x > agora - 15 * 60 * 1000);
+  if (t.length >= 10) return res.status(429).json({ erro: 'Muitas tentativas. Espere 15 minutos e tente de novo.' });
+  if (!senhaConfere(String(req.body.email || ''), String(req.body.senha || ''))) {
+    t.push(agora); tentativas.set(ip, t);
+    return res.status(401).json({ erro: 'E-mail ou senha incorretos.' });
+  }
+  tentativas.delete(ip);
   const token = crypto.randomBytes(24).toString('hex');
   sessoes.set(token, Date.now() + 12 * 60 * 60 * 1000);
-  res.json({ token, senhaPadrao: !db.senhaHash });
+  res.json({ token, deveTrocar: !!db.deveTrocar });
 });
 
 app.get('/api/admin/dados', exigirAdmin, (req, res) => {
@@ -355,7 +370,8 @@ app.get('/api/admin/dados', exigirAdmin, (req, res) => {
     sorteios: db.sorteios,
     aparencia: db.aparencia,
     adminPath: db.adminPath,
-    senhaPadrao: !db.senhaHash
+    adminEmail: db.adminEmail,
+    deveTrocar: !!db.deveTrocar
   });
 });
 
@@ -470,12 +486,20 @@ app.delete('/api/admin/sorteios', exigirAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/api/admin/senha', exigirAdmin, (req, res) => {
+app.post('/api/admin/credenciais', exigirAdmin, (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
   const nova = String(req.body.senha || '');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ erro: 'Informe um e-mail válido.' });
   if (nova.length < 6) return res.status(400).json({ erro: 'A senha precisa ter pelo menos 6 caracteres.' });
+  if (email === EMAIL_PADRAO && nova === SENHA_PADRAO) return res.status(400).json({ erro: 'Escolha uma senha diferente da padrão.' });
+  db.adminEmail = email;
   db.senhaHash = hashSenha(nova);
+  db.deveTrocar = false;
   salvar();
-  res.json({ ok: true });
+  // Derruba as outras sessões abertas com o acesso antigo
+  const atual = (req.headers.authorization || '').replace('Bearer ', '');
+  for (const tk of [...sessoes.keys()]) if (tk !== atual) sessoes.delete(tk);
+  res.json({ ok: true, email });
 });
 
 const COR = /^#[0-9a-fA-F]{6}$/;

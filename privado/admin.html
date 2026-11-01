@@ -14,10 +14,28 @@
     <div id="telaLogin" class="card" style="max-width:380px;margin:60px auto">
       <h2>🔐 Painel do organizador</h2>
       <form id="loginForm">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" autocomplete="username" inputmode="email" required>
         <label for="senha">Senha</label>
         <input id="senha" type="password" autocomplete="current-password" required>
         <div id="loginErro" class="erro hidden"></div>
         <button class="btn btn-primario btn-full" style="margin-top:16px">Entrar</button>
+      </form>
+    </div>
+
+    <!-- Primeiro acesso: criar e-mail e senha próprios -->
+    <div id="telaTrocar" class="card hidden" style="max-width:420px;margin:60px auto">
+      <h2>🔑 Crie seu acesso</h2>
+      <p class="muted" style="margin-top:0">Você entrou com o acesso padrão. Escolha agora o e-mail e a senha que vai usar daqui pra frente.</p>
+      <form id="trocarForm">
+        <label for="novoEmail">Seu e-mail</label>
+        <input id="novoEmail" type="email" autocomplete="username" required>
+        <label for="novaSenha1">Nova senha (mínimo 6 caracteres)</label>
+        <input id="novaSenha1" type="password" autocomplete="new-password" minlength="6" required>
+        <label for="novaSenha2">Repita a nova senha</label>
+        <input id="novaSenha2" type="password" autocomplete="new-password" minlength="6" required>
+        <div id="trocarErro" class="erro hidden"></div>
+        <button class="btn btn-primario btn-full" style="margin-top:16px">Salvar e entrar no painel</button>
       </form>
     </div>
 
@@ -136,10 +154,15 @@
         </form>
 
         <form class="card" id="senhaForm">
-          <h3>Trocar senha do admin</h3>
-          <input id="novaSenha" type="password" minlength="6" placeholder="Nova senha (mín. 6 caracteres)" required>
+          <h3>Acesso ao painel</h3>
+          <label for="credEmail">E-mail de login</label>
+          <input id="credEmail" type="email" autocomplete="username" required>
+          <div class="grid2">
+            <div><label for="credSenha1">Nova senha</label><input id="credSenha1" type="password" autocomplete="new-password" minlength="6" required></div>
+            <div><label for="credSenha2">Repita a nova senha</label><input id="credSenha2" type="password" autocomplete="new-password" minlength="6" required></div>
+          </div>
           <div id="senhaMsg"></div>
-          <button class="btn" style="margin-top:12px">Salvar nova senha</button>
+          <button class="btn" style="margin-top:12px">Salvar e-mail e senha</button>
         </form>
       </section>
 
@@ -282,14 +305,15 @@
 
     function sair() {
       token = ''; sessionStorage.removeItem('rifa_admin');
-      $('#painel').classList.add('hidden'); $('#telaLogin').classList.remove('hidden');
+      $('#painel').classList.add('hidden'); $('#telaTrocar').classList.add('hidden'); $('#telaLogin').classList.remove('hidden');
     }
     $('#sairBtn').onclick = sair;
 
     $('#loginForm').onsubmit = async e => {
       e.preventDefault();
       try {
-        const r = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ senha: $('#senha').value }) });
+        const r = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ email: $('#email').value, senha: $('#senha').value }) });
+        $('#loginErro').classList.add('hidden'); $('#senha').value = '';
         token = r.token; sessionStorage.setItem('rifa_admin', token);
         entrar();
       } catch (err) { $('#loginErro').textContent = err.message; $('#loginErro').classList.remove('hidden'); }
@@ -297,14 +321,20 @@
 
     async function entrar() {
       await recarregar();
-      $('#telaLogin').classList.add('hidden'); $('#painel').classList.remove('hidden');
+      $('#telaLogin').classList.add('hidden');
+      if (dados.deveTrocar) {
+        $('#telaTrocar').classList.remove('hidden'); $('#painel').classList.add('hidden');
+        $('#novoEmail').value = ''; $('#novoEmail').focus();
+        return;
+      }
+      $('#telaTrocar').classList.add('hidden'); $('#painel').classList.remove('hidden');
       preencherConfig();
     }
 
     async function recarregar() {
       dados = await adm('/api/admin/dados');
       const avisos = [];
-      if (dados.senhaPadrao) avisos.push('⚠️ Você está usando a senha padrão. Troque em <b>Configurações</b>.');
+
       if (dados.adminPath === 'admin') avisos.push('⚠️ Seu painel está no endereço padrão <b>/admin</b>, fácil de adivinhar. Escolha um endereço secreto em <b>Configurações</b>.');
       if (!dados.config.pixChave) avisos.push('⚠️ Cadastre sua <b>chave Pix</b> em Configurações. Sem ela, ninguém consegue comprar.');
       $('#avisos').innerHTML = avisos.map(a => `<div class="aviso">${a}</div>`).join('');
@@ -480,6 +510,7 @@
       f.preco.value = Number(c.preco).toFixed(2).replace('.', ',');
       f.whatsapp.value = telefoneFmt(c.whatsapp);
       $('#enderecoBase').textContent = location.origin + '/';
+      $('#credEmail').value = dados.adminEmail || '';
       $('#endereco').value = dados.adminPath;
       preencherAparencia();
       desenharFotos();
@@ -537,11 +568,24 @@
       $('#fotoMsg').innerHTML = `<div class="ok">${arqs.length > 1 ? 'Fotos adicionadas!' : 'Foto adicionada!'}${d.aviso ? ' ' + esc(d.aviso) : ''}</div>`;
       setTimeout(() => $('#fotoMsg').innerHTML = '', 4000);
     };
+    async function salvarCredenciais(email, s1, s2) {
+      if (s1 !== s2) throw new Error('As duas senhas não são iguais.');
+      return adm('/api/admin/credenciais', { method: 'POST', body: JSON.stringify({ email, senha: s1 }) });
+    }
+    $('#trocarForm').onsubmit = async e => {
+      e.preventDefault();
+      try {
+        await salvarCredenciais($('#novoEmail').value, $('#novaSenha1').value, $('#novaSenha2').value);
+        $('#novaSenha1').value = $('#novaSenha2').value = '';
+        await entrar();
+      } catch (err) { $('#trocarErro').textContent = err.message; $('#trocarErro').classList.remove('hidden'); }
+    };
     $('#senhaForm').onsubmit = async e => {
       e.preventDefault();
       try {
-        await adm('/api/admin/senha', { method: 'POST', body: JSON.stringify({ senha: $('#novaSenha').value }) });
-        $('#senhaMsg').innerHTML = '<div class="ok">Senha alterada!</div>'; $('#novaSenha').value = '';
+        await salvarCredenciais($('#credEmail').value, $('#credSenha1').value, $('#credSenha2').value);
+        $('#senhaMsg').innerHTML = '<div class="ok">Acesso atualizado! Use o novo e-mail e senha no próximo login.</div>';
+        $('#credSenha1').value = $('#credSenha2').value = '';
         await recarregar();
       } catch (err) { $('#senhaMsg').innerHTML = `<div class="erro">${esc(err.message)}</div>`; }
     };

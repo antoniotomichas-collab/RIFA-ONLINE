@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="wrap">
+  <div class="wrap" style="max-width:1320px">
 
     <!-- Login -->
     <div id="telaLogin" class="card" style="max-width:380px;margin:60px auto">
@@ -32,14 +32,44 @@
       </div>
       <div id="avisos"></div>
       <div class="abas">
-        <button class="btn ativa" data-aba="pedidos">💰 Pedidos</button>
+        <button class="btn ativa" data-aba="dashboard">📊 Dashboard</button>
+        <button class="btn" data-aba="pedidos">💰 Pedidos</button>
         <button class="btn" data-aba="config">⚙️ Configurações</button>
         <button class="btn" data-aba="aparencia">🎨 Aparência</button>
         <button class="btn" data-aba="sorteio">🎡 Roleta de sorteio</button>
       </div>
 
       <!-- Pedidos -->
-      <section id="aba-pedidos">
+      <!-- Dashboard -->
+      <section id="aba-dashboard">
+        <div class="stats" id="dashStats"></div>
+        <div class="card">
+          <div class="linha" style="justify-content:space-between;margin-bottom:6px">
+            <h3 style="margin:0">Arrecadação por dia</h3>
+            <span class="muted" style="font-size:13px">Pagamentos confirmados · últimos 14 dias</span>
+          </div>
+          <div class="grafico" id="grafico"></div>
+        </div>
+        <div class="dash-grid">
+          <div class="card">
+            <h3>Últimos pagamentos confirmados</h3>
+            <div class="tabela-wrap"><table class="tabela" id="tabPagos"></table></div>
+          </div>
+          <div class="card">
+            <h3>Aguardando confirmação</h3>
+            <div id="dashPendentes"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="linha" style="justify-content:space-between;margin-bottom:10px">
+            <h3 style="margin:0">Compradores</h3>
+            <input id="buscaComprador" placeholder="Buscar nome ou telefone" style="max-width:280px">
+          </div>
+          <div class="tabela-wrap"><table class="tabela" id="tabCompradores"></table></div>
+        </div>
+      </section>
+
+      <section id="aba-pedidos" class="hidden">
         <div class="stats" id="stats"></div>
         <div class="card">
           <div class="linha" style="margin-bottom:12px">
@@ -114,7 +144,7 @@
       </section>
 
       <!-- Aparência -->
-      <section id="aba-aparencia" class="hidden">
+      <section id="aba-aparencia" class="hidden aparencia-grid">
         <form id="aparenciaForm" class="card">
           <h3>Cores</h3>
           <div class="cores">
@@ -151,12 +181,34 @@
             <div><label>Título da grade de números</label><input name="tituloNumeros"></div>
             <div><label>Texto do botão de compra</label><input name="textoBotao"></div>
           </div>
-          <label>Mensagem enquanto espera a confirmação</label>
-          <textarea name="msgPendente"></textarea>
-          <label>Mensagem quando o pagamento é confirmado</label>
-          <textarea name="msgConfirmado"></textarea>
           <label>Rodapé</label>
           <textarea name="rodape"></textarea>
+
+          <h3 style="margin-top:24px">Mensagens para o comprador</h3>
+          <p class="muted" style="font-size:13px;margin-top:0">Use estas palavras entre chaves e o sistema troca pelos dados de cada pessoa:
+            <code>{nome}</code> <code>{numeros}</code> <code>{total}</code> <code>{pedido}</code> <code>{premio}</code> <code>{rifa}</code> <code>{numero}</code> (número sorteado)</p>
+          <div class="msg-bloco" data-tela="pendente">
+            <b>⏳ Enquanto espera a confirmação</b>
+            <label>Título</label><input name="tituloPendente">
+            <label>Mensagem</label><textarea name="msgPendente"></textarea>
+          </div>
+          <div class="msg-bloco" data-tela="pago">
+            <b>✅ Agradecimento quando você confirma o pagamento</b>
+            <label>Título</label><input name="tituloConfirmado">
+            <label>Mensagem na tela do comprador</label><textarea name="msgConfirmado"></textarea>
+            <label>Mensagem de agradecimento no WhatsApp</label><textarea name="whatsObrigado"></textarea>
+          </div>
+          <div class="msg-bloco" data-tela="ganhou">
+            <b>🏆 Para quem ganhou</b>
+            <label>Título na tela do ganhador</label><input name="tituloVoceGanhou">
+            <label>Mensagem na tela do ganhador</label><textarea name="msgVoceGanhou"></textarea>
+            <label>Mensagem para o ganhador no WhatsApp</label><textarea name="whatsGanhador"></textarea>
+          </div>
+          <div class="msg-bloco" data-tela="ganhador">
+            <b>🎉 Resultado no site para todo mundo</b>
+            <label>Título</label><input name="tituloGanhador">
+            <label>Mensagem</label><textarea name="msgGanhador"></textarea>
+          </div>
 
           <h3 style="margin-top:24px">O que aparece no site</h3>
           <label class="chk"><input type="checkbox" name="mostrarProgresso"> Barra de progresso das vendas</label>
@@ -172,12 +224,20 @@
             <button type="button" class="btn" id="aparenciaPadrao">Voltar ao padrão</button>
           </div>
         </form>
-        <div class="card">
-          <div class="linha" style="justify-content:space-between;margin-bottom:12px">
-            <h3 style="margin:0">Pré-visualização</h3>
-            <span class="muted" style="font-size:13px">Atualiza ao salvar</span>
+        <div class="card previa-card">
+          <div class="linha" style="justify-content:space-between;margin-bottom:10px">
+            <h3 style="margin:0">Prévia ao vivo</h3>
+            <span class="muted" style="font-size:13px">Muda enquanto você digita. Só vai para o site ao salvar.</span>
           </div>
-          <iframe id="previa" class="previa" title="Pré-visualização do site"></iframe>
+          <div class="previa-abas" id="previaAbas">
+            <button type="button" class="btn btn-pq ativa" data-previa="site">Site</button>
+            <button type="button" class="btn btn-pq" data-previa="pendente">⏳ Aguardando</button>
+            <button type="button" class="btn btn-pq" data-previa="pago">✅ Confirmado</button>
+            <button type="button" class="btn btn-pq" data-previa="ganhou">🏆 Ganhador</button>
+            <button type="button" class="btn btn-pq" data-previa="ganhador">🎉 Resultado no site</button>
+          </div>
+          <div class="previa-zap hidden" id="previaZap"></div>
+          <iframe id="previa" class="previa" title="Prévia do site"></iframe>
         </div>
       </section>
 
@@ -248,16 +308,99 @@
       if (dados.adminPath === 'admin') avisos.push('⚠️ Seu painel está no endereço padrão <b>/admin</b>, fácil de adivinhar. Escolha um endereço secreto em <b>Configurações</b>.');
       if (!dados.config.pixChave) avisos.push('⚠️ Cadastre sua <b>chave Pix</b> em Configurações. Sem ela, ninguém consegue comprar.');
       $('#avisos').innerHTML = avisos.map(a => `<div class="aviso">${a}</div>`).join('');
+      desenharDashboard();
       desenharPedidos();
       desenharSorteio();
     }
+
+    // Mensagens de WhatsApp com os dados do pedido
+    function varsPedido(p, numeroSorteado) {
+      const q = dados.config.quantidade;
+      return { nome: p.nome.split(' ')[0], nomeCompleto: p.nome, numeros: p.numeros.map(n => pad(n, q)).join(', '), total: brl(p.total),
+        pedido: '#' + p.codigo, premio: dados.config.premio, rifa: dados.config.titulo, numero: numeroSorteado ? pad(numeroSorteado, q) : '' };
+    }
+    const linkZap = (tel, texto) => `https://wa.me/55${tel}?text=${encodeURIComponent(texto)}`;
+    const linkObrigado = p => linkZap(p.telefone, preencher(dados.aparencia.whatsObrigado, varsPedido(p)));
+
+    // ---------- Dashboard ----------
+    function desenharDashboard() {
+      const c = dados.config, ps = dados.pedidos;
+      const pagos = ps.filter(p => p.status === 'pago'), pend = ps.filter(p => p.status === 'pendente');
+      const arrecadado = pagos.reduce((s, p) => s + p.total, 0);
+      const nPagos = pagos.reduce((s, p) => s + p.numeros.length, 0);
+      const compradores = new Set(pagos.map(p => p.telefone)).size;
+      const hoje = new Date().toDateString();
+      const hojeValor = pagos.filter(p => new Date(p.confirmadoEm || p.criadoEm).toDateString() === hoje).reduce((s, p) => s + p.total, 0);
+      $('#dashStats').innerHTML = [
+        [brl(arrecadado), 'Arrecadado (confirmado)', 'verde'],
+        [brl(pend.reduce((s, p) => s + p.total, 0)), `A confirmar (${pend.length} pedidos)`, 'laranja'],
+        [brl(hojeValor), 'Confirmado hoje', ''],
+        [`${nPagos}/${c.quantidade}`, `Números vendidos (${Math.round(nPagos / c.quantidade * 100)}%)`, ''],
+        [compradores, 'Compradores', ''],
+        [brl(pagos.length ? arrecadado / pagos.length : 0), 'Valor médio por pedido', '']
+      ].map(([v, t, cor]) => `<div class="stat ${cor ? 'stat-' + cor : ''}"><b>${v}</b><span>${t}</span></div>`).join('');
+
+      // Gráfico de barras: um dia por barra
+      const dias = [];
+      for (let i = 13; i >= 0; i--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i); dias.push({ d, v: 0, n: 0 }); }
+      for (const p of pagos) {
+        const d = new Date(p.confirmadoEm || p.criadoEm); d.setHours(0, 0, 0, 0);
+        const dia = dias.find(x => x.d.getTime() === d.getTime());
+        if (dia) { dia.v += p.total; dia.n += p.numeros.length; }
+      }
+      const max = Math.max(...dias.map(x => x.v), 1);
+      $('#grafico').innerHTML = `<div class="barras">${dias.map(x => {
+        const rot = x.d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        return `<div class="barra-col" tabindex="0">
+          <div class="barra-dica"><b>${brl(x.v)}</b><br>${x.n} números · ${rot}</div>
+          <div class="barra" style="height:${x.v ? Math.max(3, x.v / max * 100) : 0}%"></div>
+          <span class="barra-rot">${rot.slice(0, 2)}</span></div>`;
+      }).join('')}</div>`;
+
+      $('#tabPagos').innerHTML = pagos.length ? `<thead><tr><th>Nome</th><th>Números</th><th>Valor</th><th>Confirmado</th><th></th></tr></thead><tbody>` +
+        [...pagos].sort((a, b) => new Date(b.confirmadoEm || 0) - new Date(a.confirmadoEm || 0)).slice(0, 15).map(p => `<tr>
+          <td><b>${esc(p.nome)}</b><br><span class="muted">${telefoneFmt(p.telefone)}</span></td>
+          <td>${p.numeros.map(n => pad(n, c.quantidade)).join(', ')}</td>
+          <td class="valor">${brl(p.total)}</td>
+          <td class="muted">${p.confirmadoEm ? new Date(p.confirmadoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+          <td><a class="btn btn-pq btn-verde" href="${linkObrigado(p)}" target="_blank" rel="noopener" title="Enviar agradecimento">💬</a></td></tr>`).join('') + '</tbody>'
+        : '<tbody><tr><td class="muted">Nenhum pagamento confirmado ainda.</td></tr></tbody>';
+
+      $('#dashPendentes').innerHTML = pend.length ? pend.slice(0, 8).map(p => `<div class="pend-linha">
+          <div><b>${esc(p.nome)}</b><br><span class="muted">${p.numeros.length} números · ${brl(p.total)}</span></div>
+          <button class="btn btn-verde btn-pq" data-acao="confirmar" data-id="${p.id}">✅ Confirmar</button></div>`).join('') +
+        (pend.length > 8 ? `<p class="muted">E mais ${pend.length - 8} na aba Pedidos.</p>` : '')
+        : '<p class="muted">Nada pendente. 👍</p>';
+      desenharCompradores();
+    }
+    function desenharCompradores() {
+      const c = dados.config, q = $('#buscaComprador').value.trim().toLowerCase();
+      const mapa = new Map();
+      for (const p of dados.pedidos) {
+        if (p.status !== 'pago' && p.status !== 'pendente') continue;
+        const x = mapa.get(p.telefone) || { nome: p.nome, telefone: p.telefone, pagos: [], pend: [], valor: 0 };
+        if (p.status === 'pago') { x.pagos.push(...p.numeros); x.valor += p.total; } else x.pend.push(...p.numeros);
+        mapa.set(p.telefone, x);
+      }
+      const lista = [...mapa.values()].filter(x => !q || x.nome.toLowerCase().includes(q) || x.telefone.includes(q.replace(/\D/g, '') || '§'))
+        .sort((a, b) => b.valor - a.valor);
+      $('#tabCompradores').innerHTML = lista.length ? `<thead><tr><th>Nome</th><th>WhatsApp</th><th>Números pagos</th><th>Pendentes</th><th>Total pago</th></tr></thead><tbody>` +
+        lista.map(x => `<tr><td><b>${esc(x.nome)}</b></td>
+          <td><a href="https://wa.me/55${esc(x.telefone)}" target="_blank" rel="noopener">${telefoneFmt(x.telefone)}</a></td>
+          <td>${x.pagos.sort((a, b) => a - b).map(n => pad(n, c.quantidade)).join(', ') || '-'}</td>
+          <td class="muted">${x.pend.sort((a, b) => a - b).map(n => pad(n, c.quantidade)).join(', ') || '-'}</td>
+          <td class="valor">${brl(x.valor)}</td></tr>`).join('') + '</tbody>'
+        : '<tbody><tr><td class="muted">Nenhum comprador encontrado.</td></tr></tbody>';
+    }
+    $('#buscaComprador').oninput = desenharCompradores;
+    $('#dashPendentes').addEventListener('click', e => acaoPedido(e));
 
     // Abas
     document.querySelectorAll('[data-aba]').forEach(b => b.onclick = () => {
       document.querySelectorAll('[data-aba]').forEach(x => x.classList.toggle('ativa', x === b));
       document.querySelectorAll('section[id^="aba-"]').forEach(s => s.classList.toggle('hidden', s.id !== 'aba-' + b.dataset.aba));
       if (b.dataset.aba === 'sorteio') desenharRoleta();
-      if (b.dataset.aba === 'aparencia' && !$('#previa').src) $('#previa').src = '/';
+      if (b.dataset.aba === 'aparencia' && !$('#previa').src) mostrarPrevia('site');
     });
 
     // ---------- Pedidos ----------
@@ -294,6 +437,7 @@
           <div class="linha">
             ${p.status !== 'pago' ? `<button class="btn btn-verde btn-pq" data-acao="confirmar" data-id="${p.id}">✅ Confirmar pagamento</button>` : ''}
             ${p.status === 'pendente' || p.status === 'pago' ? `<button class="btn btn-vermelho btn-pq" data-acao="cancelar" data-id="${p.id}">Cancelar</button>` : ''}
+            ${p.status === 'pago' ? `<a class="btn btn-verde btn-pq" href="${linkObrigado(p)}" target="_blank" rel="noopener">💬 Enviar agradecimento</a>` : ''}
             ${p.status === 'pago' ? `<button class="btn btn-pq" data-acao="pendente" data-id="${p.id}">Voltar p/ pendente</button>` : ''}
             <a class="btn btn-pq" href="/pedido/${p.id}" target="_blank">Ver como comprador</a>
           </div>
@@ -301,15 +445,33 @@
     }
     $('#filtroStatus').onchange = desenharPedidos;
     $('#buscaPedido').oninput = desenharPedidos;
-    $('#listaPedidos').addEventListener('click', async e => {
+    async function acaoPedido(e) {
       const b = e.target.closest('[data-acao]');
       if (!b) return;
       const msgs = { confirmar: 'Confirmar que o Pix deste pedido caiu na sua conta?', cancelar: 'Cancelar este pedido e liberar os números?', pendente: 'Voltar este pedido para aguardando pagamento?' };
       if (!confirm(msgs[b.dataset.acao])) return;
       b.disabled = true;
-      try { await adm(`/api/admin/pedidos/${b.dataset.id}/${b.dataset.acao}`, { method: 'POST' }); await recarregar(); }
-      catch (err) { alert(err.message); b.disabled = false; }
-    });
+      try {
+        const r = await adm(`/api/admin/pedidos/${b.dataset.id}/${b.dataset.acao}`, { method: 'POST' });
+        await recarregar();
+        if (b.dataset.acao === 'confirmar') avisoConfirmado(r.pedido);
+      } catch (err) { alert(err.message); b.disabled = false; }
+    }
+    $('#listaPedidos').addEventListener('click', acaoPedido);
+
+    // Depois de confirmar: o comprador já vê a tela de agradecimento; aqui você manda também pelo WhatsApp
+    function avisoConfirmado(p) {
+      $('#avisoConfirmado')?.remove();
+      const d = document.createElement('div');
+      d.id = 'avisoConfirmado'; d.className = 'aviso-confirmado';
+      d.innerHTML = `<div><b>✅ Pagamento de ${esc(p.nome)} confirmado!</b><br>
+          <span>A página do comprador já mostra a mensagem de agradecimento.</span></div>
+        <div class="linha"><a class="btn btn-verde btn-pq" href="${linkObrigado(p)}" target="_blank" rel="noopener">💬 Agradecer no WhatsApp</a>
+        <button type="button" class="btn btn-pq" aria-label="Fechar">✕</button></div>`;
+      d.querySelector('button').onclick = () => d.remove();
+      document.body.appendChild(d);
+      setTimeout(() => d.remove(), 15000);
+    }
 
     // ---------- Configurações ----------
     function preencherConfig() {
@@ -399,15 +561,48 @@
       try {
         await adm('/api/admin/aparencia', { method: 'PUT', body: JSON.stringify(corpo) });
         $('#aparenciaMsg').innerHTML = '<div class="ok">Aparência salva! O site já está atualizado.</div>';
-        await recarregar(); $('#previa').src = '/?t=' + Date.now();
+        await recarregar(); recarregarPrevia();
       } catch (err) { $('#aparenciaMsg').innerHTML = `<div class="erro">${esc(err.message)}</div>`; }
       setTimeout(() => $('#aparenciaMsg').innerHTML = '', 4000);
     };
     $('#aparenciaPadrao').onclick = async () => {
       if (!confirm('Voltar todas as cores e textos para o padrão?')) return;
       await adm('/api/admin/aparencia/padrao', { method: 'PUT' });
-      await recarregar(); preencherAparencia(); $('#previa').src = '/?t=' + Date.now();
+      await recarregar(); preencherAparencia(); recarregarPrevia();
     };
+
+    // ---------- Prévia ao vivo ----------
+    let telaPrevia = 'site';
+    const URL_PREVIA = { site: '/', ganhador: '/?previa=ganhador', pendente: '/pedido/previa-pendente', pago: '/pedido/previa-pago', ganhou: '/pedido/previa-ganhou' };
+    function aparenciaDoFormulario() {
+      const a = {};
+      for (const el of $('#aparenciaForm').elements) if (el.name) a[el.name] = el.type === 'checkbox' ? el.checked : (el.type === 'number' ? Number(el.value) : el.value);
+      return a;
+    }
+    function enviarPrevia() {
+      const a = aparenciaDoFormulario();
+      try { $('#previa').contentWindow.postMessage({ tipo: 'previa', aparencia: a }, location.origin); } catch {}
+      // Mensagem de WhatsApp de exemplo para a tela escolhida
+      const exemplo = { nome: 'Maria', nomeCompleto: 'Maria da Silva', numeros: '007, 013, 042', total: brl(3 * dados.config.preco),
+        pedido: '#0001', premio: dados.config.premio, rifa: dados.config.titulo, numero: '007' };
+      const zap = telaPrevia === 'pago' ? a.whatsObrigado : telaPrevia === 'ganhou' ? a.whatsGanhador : '';
+      $('#previaZap').classList.toggle('hidden', !zap);
+      if (zap) $('#previaZap').innerHTML = `<span class="muted">Mensagem do WhatsApp:</span><div class="balao">${esc(preencher(zap, exemplo))}</div>`;
+    }
+    function mostrarPrevia(tela) {
+      telaPrevia = tela;
+      document.querySelectorAll('[data-previa]').forEach(b => b.classList.toggle('ativa', b.dataset.previa === tela));
+      $('#previa').src = URL_PREVIA[tela];
+      enviarPrevia();
+    }
+    function recarregarPrevia() { $('#previa').src = URL_PREVIA[telaPrevia]; }
+    $('#previa').addEventListener('load', () => setTimeout(enviarPrevia, 150));
+    document.querySelectorAll('[data-previa]').forEach(b => b.onclick = () => mostrarPrevia(b.dataset.previa));
+    let tPrevia;
+    $('#aparenciaForm').addEventListener('input', () => { clearTimeout(tPrevia); tPrevia = setTimeout(enviarPrevia, 120); });
+    $('#aparenciaForm').addEventListener('change', enviarPrevia);
+    // Ao clicar num bloco de mensagem, a prévia vai para a tela correspondente
+    document.querySelectorAll('.msg-bloco').forEach(bl => bl.addEventListener('focusin', () => { if (telaPrevia !== bl.dataset.tela) mostrarPrevia(bl.dataset.tela); }));
     $('#enderecoForm').onsubmit = async e => {
       e.preventDefault();
       try {
@@ -512,7 +707,7 @@
       $('#vencedorInfo').innerHTML = `<h2 style="margin:8px 0 4px">${esc(r.nome)}</h2>
         <div class="muted">${telefoneFmt(r.telefone)} · pedido #${esc(r.pedido)}</div>
         <a class="btn btn-verde" style="margin-top:12px" target="_blank" rel="noopener"
-           href="https://wa.me/55${esc(r.telefone)}?text=${encodeURIComponent(`Parabéns, ${r.nome.split(' ')[0]}! Seu número ${pad(r.numero, dados.config.quantidade)} foi o sorteado na rifa "${dados.config.titulo}"! 🎉`)}">💬 Avisar ganhador no WhatsApp</a>`;
+           href="${linkZap(r.telefone, preencher(dados.aparencia.whatsGanhador, varsPedido(dados.pedidos.find(p => p.codigo === r.pedido) || { nome: r.nome, numeros: [r.numero], total: 0, codigo: r.pedido }, r.numero)))}">💬 Avisar ganhador no WhatsApp</a>`;
       girando = false; $('#girarBtn').disabled = false;
       await recarregar();
     };

@@ -20,7 +20,12 @@ Site de rifa com pagamento exclusivo via Pix, painel do organizador e roleta de 
   e o `/admin` deixa de existir.
 - Aba **Aparência**: cores, textos, botão de compra, mensagens de pendente e
   confirmado, rodapé e o que aparece ou some no site, com pré-visualização.
+- **Dashboard**: arrecadado, valor a confirmar, vendas de hoje, números vendidos,
+  compradores, gráfico de arrecadação por dia, últimos pagamentos e lista de compradores
 - Pedidos: confirmar pagamento, cancelar, voltar para pendente, resumo do arrecadado
+- Mensagens configuráveis com prévia ao vivo: aguardando, agradecimento após a
+  confirmação (na tela e no WhatsApp), tela do ganhador, WhatsApp do ganhador e
+  resultado no site. Aceitam {nome}, {numeros}, {total}, {pedido}, {premio}, {rifa}, {numero}
 - Até 10 fotos do prêmio em carrossel animado (efeitos cinema, zoom, brilho, flutuar
   ou pulsar; troca esmaecendo ou deslizando), com reordenar e remover
 - Configurações: título, prêmio, descrição, valor, quantidade de números, fotos,

@@ -42,7 +42,15 @@ const DB_INICIAL = {
     rotuloPreco: 'Valor por número',
     tituloNumeros: 'Escolha seus números',
     msgPendente: 'Pague o Pix abaixo. Assim que o organizador confirmar o recebimento, esta página mostra CONFIRMADO.',
-    msgConfirmado: 'Seus números estão garantidos. Boa sorte! 🍀',
+    tituloPendente: 'Aguardando confirmação',
+    tituloConfirmado: 'PAGAMENTO CONFIRMADO!',
+    msgConfirmado: 'Obrigado pela compra, {nome}! Seus números {numeros} estão garantidos. Boa sorte! 🍀',
+    tituloGanhador: '🎉 Temos um ganhador!',
+    msgGanhador: 'Parabéns, {nome}! O número {numero} levou o prêmio {premio}.',
+    tituloVoceGanhou: 'VOCÊ GANHOU! 🏆',
+    msgVoceGanhou: 'Parabéns, {nome}! Seu número {numero} foi o sorteado e o prêmio {premio} é seu. O organizador vai entrar em contato.',
+    whatsObrigado: 'Olá, {nome}! Recebemos seu pagamento de {total} da rifa "{rifa}". Seus números: {numeros}. Obrigado e boa sorte! 🍀',
+    whatsGanhador: 'Parabéns, {nome}! 🎉 Seu número {numero} foi o sorteado na rifa "{rifa}" e você ganhou {premio}! Vamos combinar a entrega.',
     rodape: 'Pagamento exclusivo via Pix. Seus números são confirmados após a verificação do pagamento pelo organizador.',
     mostrarProgresso: true,
     mostrarContagem: true,
@@ -284,11 +292,29 @@ app.post('/api/pedidos', (req, res) => {
   res.json({ id: pedido.id });
 });
 
+// Pedido de exemplo para a prévia das telas no painel
+app.get('/api/previa/pedido/:status', async (req, res) => {
+  const status = ['pendente', 'pago', 'ganhou'].includes(req.params.status) ? req.params.status : 'pendente';
+  const q = db.config.quantidade;
+  const numeros = [7, 13, 42].filter(n => n <= q);
+  const p = { id: 'previa-' + status, codigo: '0001', nome: 'Maria da Silva', numeros: numeros.length ? numeros : [1],
+    total: Math.round((numeros.length || 1) * db.config.preco * 100) / 100,
+    status: status === 'ganhou' ? 'pago' : status, criadoEm: new Date().toISOString() };
+  const dados = db.config.pixChave ? pedidoPublico(p) : { ...p, pix: 'PIX-DE-EXEMPLO', reservaMinutos: db.config.reservaMinutos };
+  dados.ganhou = status === 'ganhou' ? p.numeros[0] : null;
+  dados.qr = await QRCode.toDataURL(dados.pix, { margin: 1, width: 320 });
+  dados.rifa = configPublica();
+  dados.previa = true;
+  res.json(dados);
+});
+
 app.get('/api/pedidos/:id', async (req, res) => {
   expirarReservas();
   const p = db.pedidos.find(x => x.id === req.params.id);
   if (!p) return res.status(404).json({ erro: 'Pedido não encontrado.' });
   const dados = pedidoPublico(p);
+  const ultimo = db.sorteios[db.sorteios.length - 1];
+  dados.ganhou = p.status === 'pago' && ultimo && p.numeros.includes(ultimo.numero) ? ultimo.numero : null;
   dados.qr = await QRCode.toDataURL(dados.pix, { margin: 1, width: 320 });
   dados.rifa = configPublica();
   res.json(dados);
@@ -461,7 +487,8 @@ app.put('/api/admin/aparencia', exigirAdmin, (req, res) => {
   }
   if (b.transicaoFoto !== undefined) a.transicaoFoto = b.transicaoFoto === 'deslizar' ? 'deslizar' : 'esmaecer';
   if (b.intervaloFoto !== undefined) a.intervaloFoto = Math.min(30, Math.max(2, parseInt(b.intervaloFoto, 10) || 5));
-  for (const k of ['textoBotao', 'rotuloPremio', 'rotuloPreco', 'tituloNumeros', 'msgPendente', 'msgConfirmado', 'rodape']) {
+  for (const k of ['textoBotao', 'rotuloPremio', 'rotuloPreco', 'tituloNumeros', 'msgPendente', 'msgConfirmado', 'rodape',
+    'tituloPendente', 'tituloConfirmado', 'tituloGanhador', 'msgGanhador', 'tituloVoceGanhou', 'msgVoceGanhou', 'whatsObrigado', 'whatsGanhador']) {
     if (b[k] !== undefined) a[k] = String(b[k]).slice(0, 500);
   }
   for (const k of ['mostrarProgresso', 'mostrarContagem', 'mostrarAleatorio', 'mostrarConsulta', 'mostrarGanhador', 'mostrarWhatsapp']) {

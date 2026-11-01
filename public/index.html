@@ -94,9 +94,19 @@
   <script>
     let rifa = null, ocupados = {}, selecionados = new Set(), filtro = 'todos', limite = 500;
 
+    let ultimaResposta = null;
+    // ?previa=ganhador mostra a faixa do ganhador com dados de exemplo (usado no painel)
+    const PREVIA = new URLSearchParams(location.search).get('previa');
     async function carregar() {
-      const d = await api('/api/rifa');
-      rifa = d.config;
+      ultimaResposta = await api('/api/rifa');
+      if (PREVIA === 'ganhador' && !ultimaResposta.ganhador) ultimaResposta.ganhador = { numero: 7, nome: 'Maria' };
+      renderizar();
+    }
+    function aoMudarPrevia() { if (ultimaResposta) renderizar(); }
+
+    function renderizar() {
+      const d = ultimaResposta;
+      rifa = { ...d.config, aparencia: comPrevia(d.config.aparencia) };
       ocupados = d.ocupados;
       for (const n of [...selecionados]) if (ocupados[n] || n > rifa.quantidade) selecionados.delete(n);
       const a = rifa.aparencia;
@@ -129,9 +139,10 @@
 
       if (d.ganhador && a.mostrarGanhador) {
         $('#ganhador').classList.remove('hidden');
-        $('#ganhador').innerHTML = `<div class="premio-label" style="color:#e9d5ff">🎉 Resultado do sorteio</div>
-          <div class="numero">${pad(d.ganhador.numero, rifa.quantidade)}</div>
-          <div>Ganhador(a): <b>${esc(d.ganhador.nome)}</b></div>`;
+        const v = { nome: d.ganhador.nome, numero: pad(d.ganhador.numero, rifa.quantidade), premio: rifa.premio, rifa: rifa.titulo };
+        $('#ganhador').innerHTML = `<div class="ganhador-titulo">${esc(preencher(a.tituloGanhador, v))}</div>
+          <div class="numero">${v.numero}</div>
+          <div class="ganhador-msg">${esc(preencher(a.msgGanhador, v))}</div>`;
       } else $('#ganhador').classList.add('hidden');
 
       desenharGrade();

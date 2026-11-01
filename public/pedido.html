@@ -19,35 +19,45 @@
   <script src="/comum.js"></script>
   <script>
     const id = location.pathname.split('/').pop();
-    let statusAnterior = null;
-
-    const TELAS = {
-      pendente: ['⏳', 'Aguardando confirmação', 'Pague o Pix abaixo. Assim que o organizador confirmar o recebimento, esta página mostra <b>CONFIRMADO</b>.'],
-      pago: ['✅', 'PAGAMENTO CONFIRMADO!', 'Seus números estão garantidos. Boa sorte! 🍀'],
-      cancelado: ['❌', 'Pedido cancelado', 'Este pedido foi cancelado pelo organizador e os números foram liberados.'],
-      expirado: ['⌛', 'Reserva expirada', 'O prazo para pagamento acabou e os números foram liberados. Se você já pagou, fale com o organizador.']
-    };
+    const ehPrevia = id.startsWith('previa-');
+    let ultimo = null, chaveAnterior = null;
 
     async function carregar() {
       let p;
-      try { p = await api('/api/pedidos/' + id); }
+      try { p = await api(ehPrevia ? '/api/previa/pedido/' + id.slice(7) : '/api/pedidos/' + id); }
       catch (e) { $('#conteudo').innerHTML = `<div class="card erro">${esc(e.message)}</div>`; return; }
-      guardarPedidoLocal(p.id);
-      if (p.status === statusAnterior) return;
-      if (statusAnterior === 'pendente' && p.status === 'pago' && navigator.vibrate) navigator.vibrate([200, 100, 200]);
-      statusAnterior = p.status;
+      if (!ehPrevia) guardarPedidoLocal(p.id);
+      const chave = p.status + '|' + p.ganhou;
+      if (chave === chaveAnterior) return;
+      if (chaveAnterior && chaveAnterior.startsWith('pendente') && p.status === 'pago' && navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      chaveAnterior = chave;
+      ultimo = p;
+      renderizar();
+    }
+    function aoMudarPrevia() { if (ultimo) renderizar(); }
 
-      aplicarAparencia(p.rifa.aparencia);
-      TELAS.pendente[2] = esc(p.rifa.aparencia.msgPendente);
-      TELAS.pago[2] = esc(p.rifa.aparencia.msgConfirmado);
-      const [icone, titulo, texto] = TELAS[p.status];
+    function renderizar() {
+      const p = ultimo;
+      const a = comPrevia(p.rifa.aparencia);
+      aplicarAparencia(a);
       const total = p.rifa.quantidade;
-      let html = `<div class="status-grande st-${p.status}">
-          <div class="icone">${icone}</div><h2>${titulo}</h2><p style="margin:0">${texto}</p></div>
+      const v = { nome: p.nome.split(' ')[0], nomeCompleto: p.nome, numeros: p.numeros.map(n => pad(n, total)).join(', '),
+        numero: p.ganhou ? pad(p.ganhou, total) : '', premio: p.rifa.premio, total: brl(p.total), pedido: '#' + p.codigo, rifa: p.rifa.titulo };
+      const TELAS = {
+        pendente: ['⏳', a.tituloPendente, a.msgPendente],
+        pago: ['✅', a.tituloConfirmado, a.msgConfirmado],
+        ganhou: ['🏆', a.tituloVoceGanhou, a.msgVoceGanhou],
+        cancelado: ['❌', 'Pedido cancelado', 'Este pedido foi cancelado pelo organizador e os números foram liberados.'],
+        expirado: ['⌛', 'Reserva expirada', 'O prazo para pagamento acabou e os números foram liberados. Se você já pagou, fale com o organizador.']
+      };
+      const st = p.ganhou ? 'ganhou' : p.status;
+      const [icone, titulo, texto] = TELAS[st];
+      let html = `<div class="status-grande st-${st}">
+          <div class="icone">${icone}</div><h2>${esc(preencher(titulo, v))}</h2><p style="margin:0;white-space:pre-line">${esc(preencher(texto, v))}</p></div>
         <div class="card">
           <div class="muted">Pedido #${esc(p.codigo)} · ${esc(p.nome)}</div>
           <h3 style="margin-top:6px">${esc(p.rifa.premio)}</h3>
-          <div class="nums-lista">${p.numeros.map(n => `<span>${pad(n, total)}</span>`).join('')}</div>
+          <div class="nums-lista">${p.numeros.map(n => `<span class="${n === p.ganhou ? 'num-ganhou' : ''}">${pad(n, total)}</span>`).join('')}</div>
           <div style="margin-top:12px">Total</div>
           <div class="total-grande">${brl(p.total)}</div>
         </div>`;
@@ -80,7 +90,7 @@
     }
 
     carregar();
-    setInterval(carregar, 8000);
+    if (!ehPrevia) setInterval(carregar, 8000);
   </script>
 </body>
 </html>

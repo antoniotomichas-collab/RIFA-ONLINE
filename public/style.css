@@ -249,3 +249,53 @@ input:focus, textarea:focus { outline: 2px solid var(--roxo); border-color: tran
 .foto-item .acoes { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; padding: 6px; background: linear-gradient(transparent, rgba(0, 0, 0, .7)); }
 .foto-item .acoes button { border: 0; border-radius: 8px; background: rgba(0, 0, 0, .6); color: #fff; width: 34px; height: 30px; cursor: pointer; font-size: 15px; }
 .foto-item .acoes button.del { background: var(--vermelho); }
+
+/* Telas de ganhador */
+.st-ganhou { background: linear-gradient(135deg, color-mix(in srgb, var(--destaque) 28%, transparent), color-mix(in srgb, var(--roxo) 30%, transparent)); border: 2px solid var(--destaque); }
+.st-ganhou .icone { animation: fx-pulsar 1.6s ease-in-out infinite; }
+.nums-lista span.num-ganhou { background: var(--destaque); color: var(--sobre-destaque, #1a1200); }
+.ganhador-titulo { font-size: 14px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #f3e8ff; }
+.ganhador-msg { white-space: pre-line; }
+
+/* Dashboard */
+.stat-verde b { color: var(--verde); }
+.stat-laranja b { color: var(--laranja); }
+.dash-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+.dash-grid > .card { margin-bottom: 16px; min-width: 0; }
+@media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; gap: 0; } }
+.grafico { height: 200px; padding-top: 12px; }
+.barras { display: flex; align-items: flex-end; gap: 6px; height: 100%; border-bottom: 1px solid var(--borda); }
+.barra-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; outline: none; }
+.barra { width: 100%; max-width: 28px; background: var(--destaque); border-radius: 4px 4px 0 0; transition: height .4s; }
+.barra-rot { position: absolute; bottom: -20px; font-size: 11px; color: var(--suave); }
+.grafico { margin-bottom: 22px; }
+.barra-dica {
+  position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); z-index: 5; display: none;
+  background: var(--card2); border: 1px solid var(--borda); border-radius: 8px; padding: 6px 10px; font-size: 12px; white-space: nowrap; text-align: center;
+}
+.barra-col:hover .barra-dica, .barra-col:focus .barra-dica { display: block; bottom: auto; top: -8px; }
+.barra-col:hover .barra { filter: brightness(1.15); }
+.tabela-wrap { overflow-x: auto; margin: 0 -4px; }
+.tabela { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabela th { text-align: left; color: var(--suave); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 6px; border-bottom: 1px solid var(--borda); }
+.tabela td { padding: 10px 6px; border-bottom: 1px solid color-mix(in srgb, var(--borda) 60%, transparent); vertical-align: top; }
+.tabela td.valor { font-weight: 800; color: var(--destaque); white-space: nowrap; }
+.pend-linha { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid color-mix(in srgb, var(--borda) 60%, transparent); }
+.aviso-confirmado {
+  position: fixed; right: 16px; bottom: 16px; z-index: 70; max-width: min(420px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 10px;
+  background: var(--card); border: 2px solid var(--verde); border-radius: 14px; padding: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+
+/* Aparência com prévia ao lado */
+.msg-bloco { border: 1px solid var(--borda); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; background: color-mix(in srgb, var(--card2) 50%, transparent); }
+.msg-bloco:focus-within { border-color: var(--roxo); }
+code { background: var(--card2); border-radius: 6px; padding: 1px 6px; font-size: 12px; }
+.previa-abas { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.previa-abas .btn.ativa { background: var(--roxo); color: #fff; }
+.previa-zap { margin-bottom: 10px; font-size: 13px; }
+.balao { background: #005c4b; color: #e9fdf6; border-radius: 10px 10px 10px 2px; padding: 8px 12px; margin-top: 4px; white-space: pre-line; font-size: 14px; }
+@media (min-width: 1100px) {
+  .aparencia-grid { display: grid; grid-template-columns: minmax(0, 1fr) 430px; gap: 16px; align-items: start; }
+  .aparencia-grid .previa-card { position: sticky; top: 12px; margin: 0; }
+  .aparencia-grid .previa { height: calc(100vh - 170px); min-height: 520px; }
+}

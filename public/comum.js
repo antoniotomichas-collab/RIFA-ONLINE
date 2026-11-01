@@ -119,3 +119,17 @@ function montarGaleria(caixa, fotos, a, alt) {
   });
   reiniciar();
 }
+
+// Troca {nome}, {numeros}, {premio}... pelos dados do pedido
+function preencher(texto, v) {
+  return String(texto || '').replace(/\{(\w+)\}/g, (m, k) => (v[k] !== undefined && v[k] !== null ? v[k] : m));
+}
+
+// Prévia ao vivo: o painel envia a aparência ainda não salva para esta página
+let previaAparencia = null;
+window.addEventListener('message', e => {
+  if (e.origin !== location.origin || !e.data || e.data.tipo !== 'previa') return;
+  previaAparencia = e.data.aparencia;
+  if (typeof aoMudarPrevia === 'function') aoMudarPrevia();
+});
+const comPrevia = a => ({ ...a, ...(previaAparencia || {}) });

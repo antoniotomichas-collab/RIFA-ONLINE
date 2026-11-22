@@ -26,6 +26,7 @@ const DB_INICIAL = {
     quantidade: 100,
     foto: '',
     fotos: [],
+    premios: [],
     pixChave: '',
     pixNome: '',
     pixCidade: '',
@@ -70,7 +71,15 @@ const DB_INICIAL = {
     animacoes: true,
     efeitoFoto: 'cinema',
     transicaoFoto: 'esmaecer',
-    intervaloFoto: 5
+    intervaloFoto: 5,
+    mostrarPremios: true,
+    tituloPremios: '🏆 Prêmios desta rifa',
+    mostrarDestaques: true,
+    minDestaques: 10,
+    maxDestaques: 30,
+    nomeDestaques: 'curto',
+    tituloDestaques: '🔥 Quem já garantiu {min} números ou mais',
+    textoDestaques: 'Gente de verdade participando. Garanta os seus também!'
   },
   adminPath: process.env.ADMIN_PATH || 'admin',
   senhaHash: null,
@@ -242,7 +251,7 @@ function configPublica() {
   const c = db.config;
   return {
     titulo: c.titulo, premio: c.premio, descricao: c.descricao, preco: c.preco,
-    quantidade: c.quantidade, foto: c.fotos[0] || '', fotos: c.fotos, whatsapp: c.whatsapp, dataSorteio: c.dataSorteio, dataHora: c.dataHora,
+    quantidade: c.quantidade, foto: c.fotos[0] || '', fotos: c.fotos, premios: c.premios || [], whatsapp: c.whatsapp, dataSorteio: c.dataSorteio, dataHora: c.dataHora,
     pixConfigurado: Boolean(c.pixChave),
     aparencia: db.aparencia
   };
@@ -267,7 +276,10 @@ app.get('/api/rifa', (req, res) => {
   res.json({
     config: configPublica(),
     ocupados: numerosOcupados(),
-    ganhador: ultimo ? { numero: ultimo.numero, nome: primeiroNome(ultimo.nome), data: ultimo.data } : null,
+    ganhador: ultimo ? { numero: ultimo.numero, nome: primeiroNome(ultimo.nome), premio: ultimo.premio || '', data: ultimo.data } : null,
+    ganhadores: db.sorteios.map(s => ({ numero: s.numero, nome: primeiroNome(s.nome), premio: s.premio || '', premioId: s.premioId || '', data: s.data })),
+    // Painel de quem comprou bastante (só pagamentos confirmados)
+    destaques: db.aparencia.mostrarDestaques ? destaquesPublicos() : [],
     // Prova social: últimos pagamentos confirmados, só com primeiro nome e inicial
     recentes: db.pedidos.filter(p => p.status === 'pago').sort((a, b) => new Date(b.confirmadoEm || 0) - new Date(a.confirmadoEm || 0))
       .slice(0, 8).map(p => ({ nome: nomeCurto(p.nome), qtd: p.numeros.length, quando: p.confirmadoEm || p.criadoEm }))
@@ -281,6 +293,25 @@ function nomeCurto(nome) {
 
 function primeiroNome(nome) {
   return String(nome || '').trim().split(/\s+/)[0] || '';
+}
+
+function formatarNome(nome, formato) {
+  if (formato === 'completo') return String(nome || '').trim().replace(/\s+/g, ' ');
+  if (formato === 'primeiro') return primeiroNome(nome);
+  return nomeCurto(nome);
+}
+
+// Soma os números pagos de cada comprador (pelo WhatsApp) e mostra quem passou do mínimo
+function destaquesPublicos() {
+  const a = db.aparencia, mapa = new Map();
+  for (const p of db.pedidos) {
+    if (p.status !== 'pago') continue;
+    const x = mapa.get(p.telefone) || { nome: p.nome, qtd: 0 };
+    x.qtd += p.numeros.length;
+    mapa.set(p.telefone, x);
+  }
+  return [...mapa.values()].filter(x => x.qtd >= a.minDestaques).sort((x, y) => y.qtd - x.qtd)
+    .slice(0, a.maxDestaques).map(x => ({ nome: formatarNome(x.nome, a.nomeDestaques), qtd: x.qtd }));
 }
 
 // Criar pedido (reserva os números)
@@ -341,8 +372,9 @@ app.get('/api/pedidos/:id', async (req, res) => {
   const p = db.pedidos.find(x => x.id === req.params.id);
   if (!p) return res.status(404).json({ erro: 'Pedido não encontrado.' });
   const dados = pedidoPublico(p);
-  const ultimo = db.sorteios[db.sorteios.length - 1];
-  dados.ganhou = p.status === 'pago' && ultimo && p.numeros.includes(ultimo.numero) ? ultimo.numero : null;
+  const venceu = p.status === 'pago' ? [...db.sorteios].reverse().find(s => p.numeros.includes(s.numero)) : null;
+  dados.ganhou = venceu ? venceu.numero : null;
+  dados.premioGanho = venceu ? venceu.premio || db.config.premio : null;
   dados.qr = await QRCode.toDataURL(dados.pix, { margin: 1, width: 320 });
   dados.rifa = configPublica();
   res.json(dados);
@@ -449,6 +481,40 @@ app.put('/api/admin/fotos', exigirAdmin, (req, res) => {
   res.json({ fotos: db.config.fotos });
 });
 
+// ---------- Vários prêmios e painel de compradores ----------
+const MAX_PREMIOS = 20;
+app.post('/api/admin/premios/foto', exigirAdmin, upload.single('foto'), (req, res) => {
+  if (!req.file) return res.status(400).json({ erro: 'Envie uma imagem (JPG, PNG, WEBP ou GIF) de até 8 MB.' });
+  res.json({ url: '/uploads/' + req.file.filename });
+});
+
+app.put('/api/admin/premios', exigirAdmin, (req, res) => {
+  const lista = Array.isArray(req.body.premios) ? req.body.premios : [];
+  if (lista.length > MAX_PREMIOS) return res.status(400).json({ erro: `Máximo de ${MAX_PREMIOS} prêmios.` });
+  const premios = [];
+  for (const [i, x] of lista.entries()) {
+    const nome = String(x.nome || '').trim().slice(0, 150);
+    if (!nome) return res.status(400).json({ erro: `Dê um nome ao ${i + 1}º prêmio (ou remova ele).` });
+    const foto = /^\/uploads\/[\w.-]+$/.test(x.foto || '') ? x.foto : '';
+    premios.push({ id: /^[a-f0-9]{8,24}$/.test(x.id || '') ? x.id : crypto.randomBytes(6).toString('hex'),
+      nome, descricao: String(x.descricao || '').trim().slice(0, 500), foto });
+  }
+  // Apaga fotos de prêmios removidos (se não forem usadas em outro lugar)
+  const emUso = new Set([...premios.map(p => p.foto), ...db.config.fotos]);
+  (db.config.premios || []).forEach(p => { if (p.foto && !emUso.has(p.foto)) apagarUpload(p.foto); });
+  db.config.premios = premios;
+
+  const a = db.aparencia, b = req.body.aparencia || {};
+  if (b.mostrarPremios !== undefined) a.mostrarPremios = Boolean(b.mostrarPremios);
+  if (b.mostrarDestaques !== undefined) a.mostrarDestaques = Boolean(b.mostrarDestaques);
+  if (b.minDestaques !== undefined) a.minDestaques = Math.min(100000, Math.max(1, parseInt(b.minDestaques, 10) || 10));
+  if (b.maxDestaques !== undefined) a.maxDestaques = Math.min(200, Math.max(1, parseInt(b.maxDestaques, 10) || 30));
+  if (b.nomeDestaques !== undefined) a.nomeDestaques = ['curto', 'primeiro', 'completo'].includes(b.nomeDestaques) ? b.nomeDestaques : 'curto';
+  for (const k of ['tituloPremios', 'tituloDestaques', 'textoDestaques']) if (b[k] !== undefined) a[k] = String(b[k]).slice(0, 200);
+  salvar();
+  res.json({ ok: true, premios, aparencia: a });
+});
+
 app.post('/api/admin/pedidos/:id/:acao', exigirAdmin, (req, res) => {
   const p = db.pedidos.find(x => x.id === req.params.id);
   if (!p) return res.status(404).json({ erro: 'Pedido não encontrado.' });
@@ -482,11 +548,16 @@ app.post('/api/admin/pedidos/:id/:acao', exigirAdmin, (req, res) => {
 // Sorteio: o servidor escolhe o número (aleatório seguro) e a roleta só anima até ele
 app.post('/api/admin/sorteio', exigirAdmin, (req, res) => {
   const pagos = db.pedidos.filter(p => p.status === 'pago');
-  const numeros = pagos.flatMap(p => p.numeros.map(n => ({ n, p })));
-  if (!numeros.length) return res.status(400).json({ erro: 'Nenhum número pago para sortear.' });
+  // Número que já ganhou um prêmio não concorre de novo
+  const jaSaiu = new Set(db.sorteios.map(s => s.numero));
+  const numeros = pagos.flatMap(p => p.numeros.map(n => ({ n, p }))).filter(x => !jaSaiu.has(x.n));
+  if (!numeros.length) return res.status(400).json({ erro: jaSaiu.size ? 'Todos os números pagos já foram sorteados.' : 'Nenhum número pago para sortear.' });
+  const premio = (db.config.premios || []).find(x => x.id === req.body.premioId);
   const sorteado = numeros[crypto.randomInt(numeros.length)];
   const resultado = {
     numero: sorteado.n,
+    premio: premio ? premio.nome : db.config.premio,
+    premioId: premio ? premio.id : '',
     nome: sorteado.p.nome,
     telefone: sorteado.p.telefone,
     pedido: sorteado.p.codigo,
@@ -558,7 +629,10 @@ app.put('/api/admin/aparencia', exigirAdmin, (req, res) => {
 });
 
 app.put('/api/admin/aparencia/padrao', exigirAdmin, (req, res) => {
-  db.aparencia = { ...DB_INICIAL.aparencia };
+  // Os ajustes da aba Prêmios (painel de compradores) não voltam junto
+  const manter = Object.fromEntries(['mostrarPremios', 'tituloPremios', 'mostrarDestaques', 'minDestaques', 'maxDestaques', 'nomeDestaques',
+    'tituloDestaques', 'textoDestaques'].map(k => [k, db.aparencia[k]]));
+  db.aparencia = { ...DB_INICIAL.aparencia, ...manter };
   salvar();
   res.json({ ok: true, aparencia: db.aparencia });
 });

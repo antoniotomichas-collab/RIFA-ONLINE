@@ -416,3 +416,51 @@ body.com-barra .recente { bottom: 96px; }
 .fonte-card small { color: var(--suave); }
 .fonte-card:has(input:checked) { border-color: var(--destaque); }
 .fonte-card:has(input:focus-visible) { outline: 2px solid var(--destaque); outline-offset: 2px; }
+
+/* ---------- Lista de prêmios ---------- */
+.premios-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.premio-item { background: var(--card2); border: 1px solid var(--borda); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+.premio-item.principal { border-color: var(--destaque); box-shadow: 0 0 0 1px var(--destaque) inset; }
+.premio-foto { position: relative; aspect-ratio: 4 / 3; background: var(--card); display: grid; place-items: center; }
+.premio-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.premio-foto > span:first-child { font-size: 48px; }
+.premio-pos { position: absolute; top: 8px; left: 8px; background: var(--destaque); color: var(--sobre-destaque, #1a1200); font-weight: 900; border-radius: 999px; padding: 3px 12px; font-size: 15px; }
+.premio-txt { padding: 12px 14px; }
+.premio-txt b { color: var(--premio); font-size: 18px; }
+.premio-txt p { margin: 4px 0 0; font-size: 14px; white-space: pre-line; }
+.premio-ganhou { margin-top: 8px; font-weight: 800; color: var(--verde); }
+@media (max-width: 640px) {
+  .premios-lista { grid-template-columns: 1fr; }
+  .premio-item { flex-direction: row; }
+  .premio-foto { width: 120px; flex: none; aspect-ratio: 1; }
+}
+
+/* ---------- Painel de quem comprou bastante ---------- */
+.destaques-card { border-color: color-mix(in srgb, var(--destaque) 45%, var(--borda)); }
+.destaques { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; max-height: 360px; overflow-y: auto; }
+.destaque { display: flex; align-items: center; gap: 10px; background: var(--card2); border: 1px solid var(--borda); border-radius: 12px; padding: 10px 12px; }
+.destaque-pos { font-size: 20px; min-width: 30px; text-align: center; font-weight: 800; color: var(--suave); }
+.destaque-nome { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.destaque-qtd { background: var(--destaque); color: var(--sobre-destaque, #1a1200); font-weight: 800; font-size: 13px; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+
+/* Vários ganhadores no topo */
+.ganhadores-lista { display: grid; gap: 8px; max-width: 520px; margin: 10px auto 0; text-align: left; }
+.ganhadores-lista > div { display: flex; gap: 12px; align-items: center; background: rgba(0, 0, 0, .25); border-radius: 12px; padding: 10px 14px; }
+.ganhadores-lista .g-num { font-size: 28px; font-weight: 900; color: var(--destaque); min-width: 70px; text-align: center; }
+
+/* Editor de prêmios no painel */
+.premio-edit { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 12px; align-items: start; border: 1px solid var(--borda); border-radius: 14px; padding: 12px; margin-bottom: 10px; background: var(--card2); }
+.premio-edit .pe-foto { position: relative; width: 110px; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--card); display: grid; place-items: center; font-size: 36px; cursor: pointer; }
+.premio-edit .pe-foto img { width: 100%; height: 100%; object-fit: cover; }
+.premio-edit .pe-foto small { position: absolute; left: 0; right: 0; bottom: 0; font-size: 11px; text-align: center; background: rgba(0, 0, 0, .6); color: #fff; padding: 3px; }
+.premio-edit input, .premio-edit textarea { margin-bottom: 6px; }
+.premio-edit textarea { min-height: 54px; }
+.premio-edit .pe-acoes { display: flex; flex-direction: column; gap: 6px; }
+.premio-edit .pe-pos { font-weight: 900; color: var(--destaque); }
+@media (max-width: 640px) {
+  .premio-edit { grid-template-columns: 80px minmax(0, 1fr); }
+  .premio-edit .pe-foto { width: 80px; }
+  .premio-edit .pe-acoes { grid-column: 1 / -1; flex-direction: row; }
+}
+.salvar-barra { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.pendente-aviso { color: var(--laranja); font-weight: 700; font-size: 14px; }

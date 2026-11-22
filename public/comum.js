@@ -126,13 +126,29 @@ function preencher(texto, v) {
 }
 
 // Prévia ao vivo: o painel envia a aparência ainda não salva para esta página
-let previaAparencia = null;
+let previaAparencia = null, previaExtra = null;
 window.addEventListener('message', e => {
   if (e.origin !== location.origin || !e.data || e.data.tipo !== 'previa') return;
   previaAparencia = e.data.aparencia;
+  // Aba Prêmios do painel: lista de prêmios e compradores ainda não salvos
+  if (e.data.premios || e.data.compradores) previaExtra = { premios: e.data.premios, compradores: e.data.compradores };
   if (typeof aoMudarPrevia === 'function') aoMudarPrevia();
 });
 const comPrevia = a => ({ ...a, ...(previaAparencia || {}) });
+
+// Nome no painel de compradores: "Maria S.", "Maria" ou "Maria da Silva"
+function formatarNome(nome, formato) {
+  const partes = String(nome || '').trim().split(/\s+/);
+  if (formato === 'completo') return partes.join(' ');
+  if (formato === 'primeiro') return partes[0];
+  return partes[0] + (partes.length > 1 ? ' ' + partes[partes.length - 1][0].toUpperCase() + '.' : '');
+}
+// Usado só na prévia: aplica mínimo, limite e formato do nome como o servidor faz
+function filtrarDestaques(compradores, a) {
+  const min = Math.max(1, Number(a.minDestaques) || 10), max = Math.max(1, Number(a.maxDestaques) || 30);
+  return compradores.filter(x => x.qtd >= min).sort((x, y) => y.qtd - x.qtd).slice(0, max)
+    .map(x => ({ nome: formatarNome(x.nome, a.nomeDestaques), qtd: x.qtd }));
+}
 
 // ---------- Fontes e temas prontos ----------
 const FONTES = {

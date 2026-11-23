@@ -30,10 +30,21 @@
       </div>
     </div>
 
+    <div class="card hidden" id="premiosCard">
+      <h2 id="tituloPremios">🏆 Prêmios desta rifa</h2>
+      <div class="premios-lista" id="premiosLista"></div>
+    </div>
+
     <div class="selos hidden" id="selos">
       <div class="selo"><span>🔒</span><div><b>Pagamento seguro</b><small>Pix direto para o organizador</small></div></div>
       <div class="selo"><span>✅</span><div><b>Confirmação garantida</b><small>Você acompanha tudo pelo seu pedido</small></div></div>
       <div class="selo"><span>🎯</span><div><b>Sorteio transparente</b><small>Resultado publicado no site</small></div></div>
+    </div>
+
+    <div class="card destaques-card hidden" id="destaquesCard">
+      <h3 id="tituloDestaques" style="margin-bottom:4px"></h3>
+      <p class="muted" id="textoDestaques" style="margin:0 0 12px;font-size:14px"></p>
+      <div class="destaques" id="destaquesLista"></div>
     </div>
 
     <div class="card" id="meusPedidosCard">
@@ -108,7 +119,10 @@
     const PREVIA = new URLSearchParams(location.search).get('previa');
     async function carregar() {
       ultimaResposta = await api('/api/rifa');
-      if (PREVIA === 'ganhador' && !ultimaResposta.ganhador) ultimaResposta.ganhador = { numero: 7, nome: 'Maria' };
+      if (PREVIA === 'ganhador' && !ultimaResposta.ganhador) {
+        ultimaResposta.ganhador = { numero: 7, nome: 'Maria' };
+        ultimaResposta.ganhadores = [ultimaResposta.ganhador];
+      }
       renderizar();
     }
     function aoMudarPrevia() { if (ultimaResposta) renderizar(); }
@@ -151,13 +165,43 @@
       recentes = a.mostrarRecentes ? (d.recentes || []) : [];
       revelarAoRolar('.wrap > .card, .selos');
 
-      if (d.ganhador && a.mostrarGanhador) {
+      const ganhadores = d.ganhadores || (d.ganhador ? [d.ganhador] : []);
+      if (ganhadores.length && a.mostrarGanhador) {
         $('#ganhador').classList.remove('hidden');
-        const v = { nome: d.ganhador.nome, numero: pad(d.ganhador.numero, rifa.quantidade), premio: rifa.premio, rifa: rifa.titulo };
-        $('#ganhador').innerHTML = `<div class="ganhador-titulo">${esc(preencher(a.tituloGanhador, v))}</div>
-          <div class="numero">${v.numero}</div>
-          <div class="ganhador-msg">${esc(preencher(a.msgGanhador, v))}</div>`;
+        const vars = g => ({ nome: g.nome, numero: pad(g.numero, rifa.quantidade), premio: g.premio || rifa.premio, rifa: rifa.titulo });
+        const ult = vars(ganhadores[ganhadores.length - 1]);
+        $('#ganhador').innerHTML = ganhadores.length === 1 ? `<div class="ganhador-titulo">${esc(preencher(a.tituloGanhador, ult))}</div>
+          <div class="numero">${ult.numero}</div>
+          <div class="ganhador-msg">${esc(preencher(a.msgGanhador, ult))}</div>`
+          : `<div class="ganhador-titulo">${esc(preencher(a.tituloGanhador, ult))}</div>
+          <div class="ganhadores-lista">${ganhadores.map(vars).map(v => `<div><b class="g-num">${v.numero}</b>
+            <span><b>${esc(v.premio)}</b><br>${esc(v.nome)}</span></div>`).join('')}</div>`;
       } else $('#ganhador').classList.add('hidden');
+
+      // Lista de prêmios (1º, 2º, 3º...)
+      const premios = (previaExtra && previaExtra.premios) || rifa.premios || [];
+      $('#premiosCard').classList.toggle('hidden', !(a.mostrarPremios && premios.length));
+      $('#tituloPremios').textContent = a.tituloPremios || '🏆 Prêmios';
+      $('#premiosLista').innerHTML = premios.map((p, i) => {
+        const g = ganhadores.find(x => x.premioId && x.premioId === p.id);
+        return `<div class="premio-item${i === 0 ? ' principal' : ''}">
+          <div class="premio-foto">${p.foto ? `<img src="${esc(p.foto)}" alt="${esc(p.nome)}" loading="lazy">` : '<span>🎁</span>'}
+            <span class="premio-pos">${i + 1}º</span></div>
+          <div class="premio-txt"><b>${esc(p.nome)}</b>${p.descricao ? `<p class="muted">${esc(p.descricao)}</p>` : ''}
+            ${g ? `<div class="premio-ganhou">🎉 ${esc(g.nome)} · nº ${pad(g.numero, rifa.quantidade)}</div>` : ''}</div></div>`;
+      }).join('');
+
+      // Painel de quem comprou bastante
+      const destaques = previaExtra && previaExtra.compradores ? filtrarDestaques(previaExtra.compradores, a) : (d.destaques || []);
+      $('#destaquesCard').classList.toggle('hidden', !(a.mostrarDestaques && destaques.length));
+      $('#tituloDestaques').textContent = preencher(a.tituloDestaques, { min: a.minDestaques });
+      $('#textoDestaques').textContent = preencher(a.textoDestaques || '', { min: a.minDestaques });
+      $('#textoDestaques').classList.toggle('hidden', !a.textoDestaques);
+      const medalha = ['🥇', '🥈', '🥉'];
+      $('#destaquesLista').innerHTML = destaques.map((x, i) => `<div class="destaque">
+          <span class="destaque-pos">${medalha[i] || (i + 1) + 'º'}</span>
+          <span class="destaque-nome">${esc(x.nome)}</span>
+          <span class="destaque-qtd">${x.qtd} números</span></div>`).join('');
 
       desenharGrade();
       atualizarBarra();

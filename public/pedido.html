@@ -42,7 +42,7 @@
       aplicarAparencia(a);
       const total = p.rifa.quantidade;
       const v = { nome: p.nome.split(' ')[0], nomeCompleto: p.nome, numeros: p.numeros.map(n => pad(n, total)).join(', '),
-        numero: p.ganhou ? pad(p.ganhou, total) : '', premio: p.rifa.premio, total: brl(p.total), pedido: '#' + p.codigo, rifa: p.rifa.titulo };
+        numero: p.ganhou ? pad(p.ganhou, total) : '', premio: p.premioGanho || p.rifa.premio, total: brl(p.total), pedido: '#' + p.codigo, rifa: p.rifa.titulo };
       const TELAS = {
         pendente: ['⏳', a.tituloPendente, a.msgPendente],
         pago: ['✅', a.tituloConfirmado, a.msgConfirmado],

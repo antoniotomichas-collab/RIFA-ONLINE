@@ -53,6 +53,7 @@
         <button class="btn ativa" data-aba="dashboard">📊 Dashboard</button>
         <button class="btn" data-aba="pedidos">💰 Pedidos</button>
         <button class="btn" data-aba="config">⚙️ Configurações</button>
+        <button class="btn" data-aba="premios">🏆 Prêmios e compradores</button>
         <button class="btn" data-aba="aparencia">🎨 Aparência</button>
         <button class="btn" data-aba="sorteio">🎡 Roleta de sorteio</button>
       </div>
@@ -165,6 +166,55 @@
           <div id="senhaMsg"></div>
           <button class="btn" style="margin-top:12px">Salvar e-mail e senha</button>
         </form>
+      </section>
+
+      <!-- Prêmios e painel de compradores -->
+      <section id="aba-premios" class="hidden aparencia-grid">
+        <form id="premiosForm" class="card">
+          <h3>Prêmios da rifa</h3>
+          <p class="muted" style="margin-top:0;font-size:14px">Coloque quantos prêmios quiser (até 20), na ordem: o primeiro é o 1º prêmio. Toque na foto para trocar.
+            Tudo aparece primeiro só na prévia ao lado. <b>Só vai para o site quando você clicar em Salvar e publicar.</b></p>
+          <label class="chk"><input type="checkbox" name="mostrarPremios"> Mostrar a lista de prêmios no site</label>
+          <label>Título da lista</label>
+          <input name="tituloPremios" maxlength="200">
+          <div id="premiosEditor" style="margin-top:12px"></div>
+          <button type="button" class="btn" id="addPremio">➕ Adicionar prêmio</button>
+          <input type="file" id="premioFotoInput" accept="image/*" class="hidden">
+
+          <h3 style="margin-top:28px">Painel "quem comprou bastante"</h3>
+          <p class="muted" style="margin-top:0;font-size:14px">Mostra no site o nome de quem comprou muitos números, para dar mais credibilidade.
+            Só conta pagamento <b>confirmado</b> por você. Os números de vários pedidos da mesma pessoa (mesmo WhatsApp) são somados.</p>
+          <label class="chk"><input type="checkbox" name="mostrarDestaques"> Mostrar o painel no site</label>
+          <div class="grid2">
+            <div><label>Aparece quem comprou a partir de (números)</label><input name="minDestaques" type="number" min="1" max="100000"></div>
+            <div><label>Mostrar no máximo (pessoas)</label><input name="maxDestaques" type="number" min="1" max="200"></div>
+            <div><label>Como mostrar o nome</label>
+              <select name="nomeDestaques">
+                <option value="curto">Primeiro nome + inicial (Maria S.)</option>
+                <option value="primeiro">Só o primeiro nome (Maria)</option>
+                <option value="completo">Nome completo (Maria da Silva)</option>
+              </select></div>
+          </div>
+          <label>Título do painel <span class="muted">({min} vira o número mínimo)</span></label>
+          <input name="tituloDestaques" maxlength="200">
+          <label>Texto abaixo do título</label>
+          <input name="textoDestaques" maxlength="200">
+          <div id="destaquesInfo" class="muted" style="font-size:14px;margin-top:10px"></div>
+
+          <div id="premiosMsg"></div>
+          <div class="salvar-barra" style="margin-top:16px">
+            <button class="btn btn-primario">✅ Salvar e publicar</button>
+            <button type="button" class="btn" id="descartarPremios">Descartar mudanças</button>
+            <span class="pendente-aviso hidden" id="premiosPendente">● Mudanças ainda não publicadas</span>
+          </div>
+        </form>
+        <div class="card previa-card">
+          <div class="linha" style="justify-content:space-between;margin-bottom:10px">
+            <h3 style="margin:0">Prévia antes de publicar</h3>
+            <span class="muted" style="font-size:13px">É assim que o site vai ficar.</span>
+          </div>
+          <iframe id="previaPremios" class="previa" title="Prévia do site com os prêmios"></iframe>
+        </div>
       </section>
 
       <!-- Aparência -->
@@ -293,6 +343,10 @@
         <div class="card center">
           <h3>Roleta de sorteio</h3>
           <p class="muted" id="sorteioInfo"></p>
+          <div id="premioSorteioBox" class="hidden" style="max-width:420px;margin:0 auto 12px">
+            <label for="premioSorteio">Sortear qual prêmio?</label>
+            <select id="premioSorteio"></select>
+          </div>
           <div class="roleta-area">
             <div class="ponteiro"></div>
             <canvas id="roleta" width="880" height="880"></canvas>
@@ -310,7 +364,7 @@
             <h3 style="margin:0">Histórico de sorteios</h3>
             <button class="btn btn-pq" id="limparSorteios">Limpar histórico</button>
           </div>
-          <p class="muted" style="font-size:13px">O último sorteio aparece como resultado no site público. Enquanto houver sorteio no histórico, novas compras ficam bloqueadas.</p>
+          <p class="muted" style="font-size:13px">Os sorteios aparecem como resultado no site público. Um número que já ganhou não entra de novo na roleta. Enquanto houver sorteio no histórico, novas compras ficam bloqueadas.</p>
           <div id="historico"></div>
         </div>
       </section>
@@ -455,6 +509,7 @@
       document.querySelectorAll('section[id^="aba-"]').forEach(s => s.classList.toggle('hidden', s.id !== 'aba-' + b.dataset.aba));
       if (b.dataset.aba === 'sorteio') desenharRoleta();
       if (b.dataset.aba === 'aparencia' && !$('#previa').src) mostrarPrevia('site');
+      if (b.dataset.aba === 'premios' && !$('#previaPremios').src) $('#previaPremios').src = '/';
     });
 
     // ---------- Pedidos ----------
@@ -537,6 +592,7 @@
       $('#credEmail').value = dados.adminEmail || '';
       $('#endereco').value = dados.adminPath;
       preencherAparencia();
+      preencherPremios();
       desenharFotos();
     }
     mascaraTelefone($('#configForm').whatsapp);
@@ -711,22 +767,148 @@
       } catch (err) { $('#enderecoMsg').innerHTML = `<div class="erro">${esc(err.message)}</div>`; }
     };
 
+    // ---------- Prêmios e painel de compradores ----------
+    let rascunhoPremios = [], premioFotoAlvo = -1, premiosMudou = false;
+    const CAMPOS_DESTAQUE = ['mostrarPremios', 'tituloPremios', 'mostrarDestaques', 'minDestaques', 'maxDestaques', 'nomeDestaques', 'tituloDestaques', 'textoDestaques'];
+    function preencherPremios(forcar) {
+      if (premiosMudou && !forcar) return; // não apaga o que você está editando quando o painel atualiza sozinho
+      rascunhoPremios = JSON.parse(JSON.stringify(dados.config.premios || []));
+      const f = $('#premiosForm'), a = dados.aparencia;
+      for (const k of CAMPOS_DESTAQUE) f[k].type === 'checkbox' ? f[k].checked = !!a[k] : f[k].value = a[k] ?? '';
+      marcarPremios(false);
+      desenharEditorPremios();
+    }
+    function marcarPremios(mudou) {
+      premiosMudou = mudou;
+      $('#premiosPendente').classList.toggle('hidden', !mudou);
+      enviarPreviaPremios();
+    }
+    function desenharEditorPremios() {
+      $('#premiosEditor').innerHTML = rascunhoPremios.length ? rascunhoPremios.map((p, i) => `<div class="premio-edit" data-i="${i}">
+          <div class="pe-foto" data-foto="${i}" title="Trocar foto">${p.foto ? `<img src="${esc(p.foto)}" alt="">` : '🎁'}<small>${p.foto ? 'Trocar foto' : 'Pôr foto'}</small></div>
+          <div><div class="pe-pos">${i + 1}º prêmio</div>
+            <input data-campo="nome" value="${esc(p.nome)}" placeholder="Ex: Moto Honda CG 160" maxlength="150">
+            <textarea data-campo="descricao" placeholder="Detalhes (opcional)" maxlength="500">${esc(p.descricao || '')}</textarea></div>
+          <div class="pe-acoes">
+            <button type="button" class="btn btn-pq" data-mover="-1" ${i === 0 ? 'disabled' : ''} aria-label="Subir">▲</button>
+            <button type="button" class="btn btn-pq" data-mover="1" ${i === rascunhoPremios.length - 1 ? 'disabled' : ''} aria-label="Descer">▼</button>
+            ${p.foto ? '<button type="button" class="btn btn-pq" data-semfoto="1" title="Tirar foto">🖼️✕</button>' : ''}
+            <button type="button" class="btn btn-pq btn-vermelho" data-remover="1" aria-label="Remover">✕</button>
+          </div></div>`).join('')
+        : '<p class="muted">Nenhum prêmio na lista. O site mostra só o prêmio principal das Configurações.</p>';
+      $('#addPremio').disabled = rascunhoPremios.length >= 20;
+    }
+    $('#addPremio').onclick = () => {
+      rascunhoPremios.push({ nome: '', descricao: '', foto: '' });
+      desenharEditorPremios(); marcarPremios(true);
+      $('#premiosEditor').lastElementChild.querySelector('input').focus();
+    };
+    $('#premiosEditor').addEventListener('input', e => {
+      const el = e.target.closest('[data-campo]'); if (!el) return;
+      rascunhoPremios[Number(el.closest('[data-i]').dataset.i)][el.dataset.campo] = el.value;
+      marcarPremios(true);
+    });
+    $('#premiosEditor').addEventListener('click', e => {
+      const caixa = e.target.closest('[data-i]'); if (!caixa) return;
+      const i = Number(caixa.dataset.i), b = e.target.closest('button');
+      if (e.target.closest('[data-foto]')) { premioFotoAlvo = i; $('#premioFotoInput').click(); return; }
+      if (!b) return;
+      if (b.dataset.mover) {
+        const j = i + Number(b.dataset.mover);
+        [rascunhoPremios[i], rascunhoPremios[j]] = [rascunhoPremios[j], rascunhoPremios[i]];
+      } else if (b.dataset.semfoto) rascunhoPremios[i].foto = '';
+      else if (b.dataset.remover) {
+        if (rascunhoPremios[i].nome && !confirm(`Remover "${rascunhoPremios[i].nome}" da lista?`)) return;
+        rascunhoPremios.splice(i, 1);
+      }
+      desenharEditorPremios(); marcarPremios(true);
+    });
+    $('#premioFotoInput').onchange = async () => {
+      const arq = $('#premioFotoInput').files[0], i = premioFotoAlvo;
+      $('#premioFotoInput').value = '';
+      if (!arq || !rascunhoPremios[i]) return;
+      const fd = new FormData(); fd.append('foto', arq);
+      $('#premiosMsg').innerHTML = '<p class="muted">Enviando foto…</p>';
+      const r = await fetch('/api/admin/premios/foto', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { $('#premiosMsg').innerHTML = `<div class="erro">${esc(d.erro || 'Falha no envio.')}</div>`; return; }
+      $('#premiosMsg').innerHTML = '';
+      rascunhoPremios[i].foto = d.url;
+      desenharEditorPremios(); marcarPremios(true);
+    };
+    function ajustesDestaque() {
+      const f = $('#premiosForm'), a = {};
+      for (const k of CAMPOS_DESTAQUE) a[k] = f[k].type === 'checkbox' ? f[k].checked : (f[k].type === 'number' ? Number(f[k].value) : f[k].value);
+      return a;
+    }
+    // Compradores com pagamento confirmado, somando pelo WhatsApp
+    function compradoresPagos() {
+      const mapa = new Map();
+      for (const p of dados.pedidos) {
+        if (p.status !== 'pago') continue;
+        const x = mapa.get(p.telefone) || { nome: p.nome, qtd: 0 };
+        x.qtd += p.numeros.length; mapa.set(p.telefone, x);
+      }
+      return [...mapa.values()];
+    }
+    function enviarPreviaPremios() {
+      if (!dados) return;
+      const a = ajustesDestaque(), min = Math.max(1, a.minDestaques || 10);
+      let compradores = compradoresPagos();
+      const reais = filtrarDestaques(compradores, a).length;
+      $('#destaquesInfo').innerHTML = reais
+        ? `✅ Hoje <b>${reais}</b> comprador${reais > 1 ? 'es aparecem' : ' aparece'} no painel.`
+        : `Ainda ninguém tem ${min} números pagos, então o painel fica escondido no site. <b>A prévia mostra nomes de exemplo</b> para você ver como fica.`;
+      if (!reais) compradores = [['Maria da Silva', 15], ['João Pereira', 8], ['Ana Souza', 5], ['Carlos Lima', 0]].map(([nome, k]) => ({ nome, qtd: min + k }));
+      const premios = rascunhoPremios.filter(p => p.nome.trim()).map(p => ({ ...p, nome: p.nome.trim() }));
+      try { $('#previaPremios').contentWindow.postMessage({ tipo: 'previa', aparencia: a, premios, compradores }, location.origin); } catch {}
+    }
+    $('#previaPremios').addEventListener('load', () => setTimeout(enviarPreviaPremios, 150));
+    $('#premiosForm').addEventListener('input', e => { if (!e.target.closest('#premiosEditor')) marcarPremios(true); });
+    $('#premiosForm').addEventListener('change', e => { if (!e.target.closest('#premiosEditor') && e.target.type !== 'file') marcarPremios(true); });
+    $('#descartarPremios').onclick = () => {
+      if (premiosMudou && !confirm('Descartar as mudanças que ainda não foram publicadas?')) return;
+      preencherPremios(true);
+    };
+    $('#premiosForm').onsubmit = async e => {
+      e.preventDefault();
+      try {
+        await adm('/api/admin/premios', { method: 'PUT', body: JSON.stringify({ premios: rascunhoPremios, aparencia: ajustesDestaque() }) });
+        premiosMudou = false;
+        await recarregar(); preencherPremios(true); preencherAparencia();
+        $('#premiosMsg').innerHTML = '<div class="ok">Publicado! O site já mostra os prêmios e o painel de compradores.</div>';
+        $('#previaPremios').src = '/';
+      } catch (err) { $('#premiosMsg').innerHTML = `<div class="erro">${esc(err.message)}</div>`; }
+      setTimeout(() => $('#premiosMsg').innerHTML = '', 5000);
+    };
+    window.addEventListener('beforeunload', e => { if (premiosMudou) { e.preventDefault(); e.returnValue = ''; } });
+
     // ---------- Roleta ----------
     const canvas = $('#roleta'), ctx = canvas.getContext('2d');
     const CORES = ['#7c3aed', '#f59e0b', '#22c55e', '#ef4444', '#3b82f6', '#ec4899', '#14b8a6', '#eab308'];
     let rotacao = 0, girando = false, numerosRoleta = [];
 
     function numerosPagos() {
-      return dados.pedidos.filter(p => p.status === 'pago').flatMap(p => p.numeros).sort((a, b) => a - b);
+      const jaSaiu = new Set(dados.sorteios.map(s => s.numero));
+      return dados.pedidos.filter(p => p.status === 'pago').flatMap(p => p.numeros).filter(n => !jaSaiu.has(n)).sort((a, b) => a - b);
     }
 
     function desenharSorteio() {
       if (!girando) { numerosRoleta = numerosPagos(); desenharRoleta(); }
-      $('#sorteioInfo').textContent = `${numerosRoleta.length} números pagos participando.`;
+      $('#sorteioInfo').textContent = `${numerosRoleta.length} números pagos participando.` + (dados.sorteios.length ? ` (${dados.sorteios.length} já sorteado${dados.sorteios.length > 1 ? 's' : ''} fica${dados.sorteios.length > 1 ? 'm' : ''} de fora)` : '');
+      const premios = dados.config.premios || [], sel = $('#premioSorteio'), antes = sel.value;
+      $('#premioSorteioBox').classList.toggle('hidden', premios.length < 1);
+      if (premios.length) {
+        const sorteados = new Set(dados.sorteios.map(s => s.premioId).filter(Boolean));
+        sel.innerHTML = premios.map((p, i) => `<option value="${p.id}">${i + 1}º · ${esc(p.nome)}${sorteados.has(p.id) ? ' (já sorteado)' : ''}</option>`).join('');
+        const proximo = premios.find(p => !sorteados.has(p.id));
+        sel.value = premios.some(p => p.id === antes && !sorteados.has(p.id)) ? antes : (proximo || premios[0]).id;
+      }
       $('#historico').innerHTML = dados.sorteios.length ? [...dados.sorteios].reverse().map(s => `
         <div class="pedido-item"><div class="cab">
           <b style="font-size:22px;color:var(--destaque)">${pad(s.numero, dados.config.quantidade)}</b>
           <span class="muted">${new Date(s.data).toLocaleString('pt-BR')}</span></div>
+          ${s.premio ? `<div><b>🏆 ${esc(s.premio)}</b></div>` : ''}
           <div>${esc(s.nome)} · <a href="https://wa.me/55${esc(s.telefone)}" target="_blank" rel="noopener">${telefoneFmt(s.telefone)}</a> · pedido #${esc(s.pedido)}</div>
         </div>`).join('') : '<p class="muted">Nenhum sorteio realizado.</p>';
     }
@@ -774,9 +956,11 @@
       numerosRoleta = numerosPagos();
       $('#sorteioErro').innerHTML = '';
       if (!numerosRoleta.length) { $('#sorteioErro').innerHTML = '<div class="erro">Confirme pelo menos um pagamento antes de sortear.</div>'; return; }
-      if (dados.sorteios.length && !confirm('Já existe um sorteio no histórico. Sortear de novo?')) return;
+      const premioId = (dados.config.premios || []).length ? $('#premioSorteio').value : '';
+      if (premioId && dados.sorteios.some(s => s.premioId === premioId) && !confirm('Este prêmio já foi sorteado. Sortear ele de novo?')) return;
+      if (!premioId && dados.sorteios.length && !confirm('Já existe um sorteio no histórico. Sortear outro número? (o que já saiu fica de fora)')) return;
       let r;
-      try { r = await adm('/api/admin/sorteio', { method: 'POST' }); }
+      try { r = await adm('/api/admin/sorteio', { method: 'POST', body: JSON.stringify({ premioId }) }); }
       catch (err) { $('#sorteioErro').innerHTML = `<div class="erro">${esc(err.message)}</div>`; return; }
 
       girando = true; $('#girarBtn').disabled = true;
@@ -803,10 +987,10 @@
 
       $('#giraTxt').textContent = '🎉 Número sorteado';
       $('#numeroAtual').textContent = pad(r.numero, dados.config.quantidade);
-      $('#vencedorInfo').innerHTML = `<h2 style="margin:8px 0 4px">${esc(r.nome)}</h2>
+      $('#vencedorInfo').innerHTML = `${r.premio ? `<div class="muted">🏆 ${esc(r.premio)}</div>` : ''}<h2 style="margin:8px 0 4px">${esc(r.nome)}</h2>
         <div class="muted">${telefoneFmt(r.telefone)} · pedido #${esc(r.pedido)}</div>
         <a class="btn btn-verde" style="margin-top:12px" target="_blank" rel="noopener"
-           href="${linkZap(r.telefone, preencher(dados.aparencia.whatsGanhador, varsPedido(dados.pedidos.find(p => p.codigo === r.pedido) || { nome: r.nome, numeros: [r.numero], total: 0, codigo: r.pedido }, r.numero)))}">💬 Avisar ganhador no WhatsApp</a>`;
+           href="${linkZap(r.telefone, preencher(dados.aparencia.whatsGanhador, { ...varsPedido(dados.pedidos.find(p => p.codigo === r.pedido) || { nome: r.nome, numeros: [r.numero], total: 0, codigo: r.pedido }, r.numero), premio: r.premio || dados.config.premio }))}">💬 Avisar ganhador no WhatsApp</a>`;
       girando = false; $('#girarBtn').disabled = false;
       await recarregar();
     };

@@ -44,6 +44,7 @@
     <div class="card destaques-card hidden" id="destaquesCard">
       <h3 id="tituloDestaques" style="margin-bottom:4px"></h3>
       <p class="muted" id="textoDestaques" style="margin:0 0 12px;font-size:14px"></p>
+      <div class="destaques-especial hidden" id="destaquesEspecial"></div>
       <div class="destaques" id="destaquesLista"></div>
     </div>
 
@@ -168,7 +169,7 @@
       const ganhadores = d.ganhadores || (d.ganhador ? [d.ganhador] : []);
       if (ganhadores.length && a.mostrarGanhador) {
         $('#ganhador').classList.remove('hidden');
-        const vars = g => ({ nome: g.nome, numero: pad(g.numero, rifa.quantidade), premio: g.premio || rifa.premio, rifa: rifa.titulo });
+        const vars = g => ({ nome: g.nome, numero: g.especial ? '⭐' : pad(g.numero, rifa.quantidade), premio: g.premio || rifa.premio, rifa: rifa.titulo });
         const ult = vars(ganhadores[ganhadores.length - 1]);
         $('#ganhador').innerHTML = ganhadores.length === 1 ? `<div class="ganhador-titulo">${esc(preencher(a.tituloGanhador, ult))}</div>
           <div class="numero">${ult.numero}</div>
@@ -186,19 +187,24 @@
         const g = ganhadores.find(x => x.premioId && x.premioId === p.id);
         return `<div class="premio-item${i === 0 ? ' principal' : ''}">
           <div class="premio-foto">${p.foto ? `<img src="${esc(p.foto)}" alt="${esc(p.nome)}" loading="lazy">` : '<span>🎁</span>'}
-            <span class="premio-pos">${i + 1}º</span></div>
-          <div class="premio-txt"><b>${esc(p.nome)}</b>${p.descricao ? `<p class="muted">${esc(p.descricao)}</p>` : ''}
-            ${g ? `<div class="premio-ganhou">🎉 ${esc(g.nome)} · nº ${pad(g.numero, rifa.quantidade)}</div>` : ''}</div></div>`;
+            <span class="premio-pos">${p.especial ? '⭐ Especial' : i + 1 + 'º'}</span></div>
+          <div class="premio-txt"><b>${esc(p.nome)}</b>${p.especial ? `<div class="premio-esp">Sorteado só entre quem comprou ${a.minDestaques}+ números</div>` : ''}${p.descricao ? `<p class="muted">${esc(p.descricao)}</p>` : ''}
+            ${g ? `<div class="premio-ganhou">🎉 ${esc(g.nome)} · ${g.especial ? g.qtd + ' números' : 'nº ' + pad(g.numero, rifa.quantidade)}</div>` : ''}</div></div>`;
       }).join('');
 
       // Painel de quem comprou bastante
       const destaques = previaExtra && previaExtra.compradores ? filtrarDestaques(previaExtra.compradores, a) : (d.destaques || []);
-      $('#destaquesCard').classList.toggle('hidden', !(a.mostrarDestaques && destaques.length));
       $('#tituloDestaques').textContent = preencher(a.tituloDestaques, { min: a.minDestaques });
       $('#textoDestaques').textContent = preencher(a.textoDestaques || '', { min: a.minDestaques });
       $('#textoDestaques').classList.toggle('hidden', !a.textoDestaques);
+      const especiais = premios.filter(p => p.especial);
+      $('#destaquesEspecial').classList.toggle('hidden', !especiais.length);
+      $('#destaquesEspecial').innerHTML = especiais.length ? `⭐ Quem está nesta lista concorre também a um sorteio só entre vocês:
+        <b>${especiais.map(p => esc(p.nome)).join(', ')}</b>` : '';
+      $('#destaquesCard').classList.toggle('hidden', !(a.mostrarDestaques && (destaques.length || especiais.length)));
       const medalha = ['🥇', '🥈', '🥉'];
-      $('#destaquesLista').innerHTML = destaques.map((x, i) => `<div class="destaque">
+      $('#destaquesLista').innerHTML = destaques.length ? '' : `<p class="muted" style="margin:0">Ninguém ainda. Garanta ${a.minDestaques} números ou mais e seja o primeiro da lista!</p>`;
+      $('#destaquesLista').innerHTML += destaques.map((x, i) => `<div class="destaque">
           <span class="destaque-pos">${medalha[i] || (i + 1) + 'º'}</span>
           <span class="destaque-nome">${esc(x.nome)}</span>
           <span class="destaque-qtd">${x.qtd} números</span></div>`).join('');

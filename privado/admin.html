@@ -786,9 +786,11 @@
     function desenharEditorPremios() {
       $('#premiosEditor').innerHTML = rascunhoPremios.length ? rascunhoPremios.map((p, i) => `<div class="premio-edit" data-i="${i}">
           <div class="pe-foto" data-foto="${i}" title="Trocar foto">${p.foto ? `<img src="${esc(p.foto)}" alt="">` : '🎁'}<small>${p.foto ? 'Trocar foto' : 'Pôr foto'}</small></div>
-          <div><div class="pe-pos">${i + 1}º prêmio</div>
+          <div><div class="pe-pos">${p.especial ? '⭐ Prêmio especial' : i + 1 + 'º prêmio'}</div>
             <input data-campo="nome" value="${esc(p.nome)}" placeholder="Ex: Moto Honda CG 160" maxlength="150">
-            <textarea data-campo="descricao" placeholder="Detalhes (opcional)" maxlength="500">${esc(p.descricao || '')}</textarea></div>
+            <textarea data-campo="descricao" placeholder="Detalhes (opcional)" maxlength="500">${esc(p.descricao || '')}</textarea>
+            <label class="chk" style="margin:2px 0;font-size:14px"><input type="checkbox" data-campo="especial" ${p.especial ? 'checked' : ''}>
+              ⭐ Prêmio especial: sorteado só entre quem comprou ${esc($('#premiosForm').minDestaques.value || 10)}+ números (uma chance por pessoa)</label></div>
           <div class="pe-acoes">
             <button type="button" class="btn btn-pq" data-mover="-1" ${i === 0 ? 'disabled' : ''} aria-label="Subir">▲</button>
             <button type="button" class="btn btn-pq" data-mover="1" ${i === rascunhoPremios.length - 1 ? 'disabled' : ''} aria-label="Descer">▼</button>
@@ -805,7 +807,8 @@
     };
     $('#premiosEditor').addEventListener('input', e => {
       const el = e.target.closest('[data-campo]'); if (!el) return;
-      rascunhoPremios[Number(el.closest('[data-i]').dataset.i)][el.dataset.campo] = el.value;
+      rascunhoPremios[Number(el.closest('[data-i]').dataset.i)][el.dataset.campo] = el.type === 'checkbox' ? el.checked : el.value;
+      if (el.type === 'checkbox') desenharEditorPremios();
       marcarPremios(true);
     });
     $('#premiosEditor').addEventListener('click', e => {
@@ -846,10 +849,15 @@
       const mapa = new Map();
       for (const p of dados.pedidos) {
         if (p.status !== 'pago') continue;
-        const x = mapa.get(p.telefone) || { nome: p.nome, qtd: 0 };
+        const x = mapa.get(p.telefone) || { nome: p.nome, telefone: p.telefone, qtd: 0 };
         x.qtd += p.numeros.length; mapa.set(p.telefone, x);
       }
       return [...mapa.values()];
+    }
+    // Quem entra no sorteio do prêmio especial (usa o mínimo já publicado)
+    function compradoresDestaque() {
+      const min = Number(dados.aparencia.minDestaques) || 10;
+      return compradoresPagos().filter(x => x.qtd >= min).sort((a, b) => b.qtd - a.qtd);
     }
     function enviarPreviaPremios() {
       if (!dados) return;
@@ -864,7 +872,11 @@
       try { $('#previaPremios').contentWindow.postMessage({ tipo: 'previa', aparencia: a, premios, compradores }, location.origin); } catch {}
     }
     $('#previaPremios').addEventListener('load', () => setTimeout(enviarPreviaPremios, 150));
-    $('#premiosForm').addEventListener('input', e => { if (!e.target.closest('#premiosEditor')) marcarPremios(true); });
+    $('#premiosForm').addEventListener('input', e => {
+      if (e.target.closest('#premiosEditor')) return;
+      if (e.target.name === 'minDestaques') desenharEditorPremios();
+      marcarPremios(true);
+    });
     $('#premiosForm').addEventListener('change', e => { if (!e.target.closest('#premiosEditor') && e.target.type !== 'file') marcarPremios(true); });
     $('#descartarPremios').onclick = () => {
       if (premiosMudou && !confirm('Descartar as mudanças que ainda não foram publicadas?')) return;
@@ -888,25 +900,40 @@
     const CORES = ['#7c3aed', '#f59e0b', '#22c55e', '#ef4444', '#3b82f6', '#ec4899', '#14b8a6', '#eab308'];
     let rotacao = 0, girando = false, numerosRoleta = [];
 
-    function numerosPagos() {
+    // Cada fatia da roleta: { rotulo, chave }. Sorteio normal = números pagos; prêmio especial = pessoas que compraram N+
+    function premioEscolhido() { return (dados.config.premios || []).find(p => p.id === $('#premioSorteio').value); }
+    function entradasRoleta() {
+      const pr = premioEscolhido();
+      if (pr && pr.especial) {
+        const jaGanhou = new Set(dados.sorteios.filter(s => s.especial).map(s => s.telefone));
+        return compradoresDestaque().filter(x => !jaGanhou.has(x.telefone)).map(x => ({ rotulo: x.nome.split(' ')[0], chave: x.telefone, qtd: x.qtd }));
+      }
       const jaSaiu = new Set(dados.sorteios.map(s => s.numero));
-      return dados.pedidos.filter(p => p.status === 'pago').flatMap(p => p.numeros).filter(n => !jaSaiu.has(n)).sort((a, b) => a - b);
+      return dados.pedidos.filter(p => p.status === 'pago').flatMap(p => p.numeros).filter(n => !jaSaiu.has(n)).sort((a, b) => a - b)
+        .map(n => ({ rotulo: pad(n, dados.config.quantidade), chave: n }));
     }
+    function infoSorteio() {
+      const pr = premioEscolhido(), n = numerosRoleta.length;
+      $('#sorteioInfo').textContent = pr && pr.especial
+        ? `⭐ Prêmio especial: ${n} pessoa${n === 1 ? '' : 's'} com ${dados.aparencia.minDestaques}+ números pagos participando (uma chance por pessoa).`
+        : `${n} números pagos participando.` + (dados.sorteios.some(s => !s.especial) ? ' (os números que já ganharam ficam de fora)' : '');
+    }
+    $('#premioSorteio').onchange = () => { if (!girando) { numerosRoleta = entradasRoleta(); desenharRoleta(); infoSorteio(); } };
 
     function desenharSorteio() {
-      if (!girando) { numerosRoleta = numerosPagos(); desenharRoleta(); }
-      $('#sorteioInfo').textContent = `${numerosRoleta.length} números pagos participando.` + (dados.sorteios.length ? ` (${dados.sorteios.length} já sorteado${dados.sorteios.length > 1 ? 's' : ''} fica${dados.sorteios.length > 1 ? 'm' : ''} de fora)` : '');
       const premios = dados.config.premios || [], sel = $('#premioSorteio'), antes = sel.value;
       $('#premioSorteioBox').classList.toggle('hidden', premios.length < 1);
       if (premios.length) {
         const sorteados = new Set(dados.sorteios.map(s => s.premioId).filter(Boolean));
-        sel.innerHTML = premios.map((p, i) => `<option value="${p.id}">${i + 1}º · ${esc(p.nome)}${sorteados.has(p.id) ? ' (já sorteado)' : ''}</option>`).join('');
+        sel.innerHTML = premios.map((p, i) => `<option value="${p.id}">${p.especial ? '⭐ Especial' : i + 1 + 'º'} · ${esc(p.nome)}${sorteados.has(p.id) ? ' (já sorteado)' : ''}</option>`).join('');
         const proximo = premios.find(p => !sorteados.has(p.id));
         sel.value = premios.some(p => p.id === antes && !sorteados.has(p.id)) ? antes : (proximo || premios[0]).id;
       }
+      if (!girando) { numerosRoleta = entradasRoleta(); desenharRoleta(); }
+      infoSorteio();
       $('#historico').innerHTML = dados.sorteios.length ? [...dados.sorteios].reverse().map(s => `
         <div class="pedido-item"><div class="cab">
-          <b style="font-size:22px;color:var(--destaque)">${pad(s.numero, dados.config.quantidade)}</b>
+          <b style="font-size:22px;color:var(--destaque)">${s.especial ? `⭐ ${s.qtd || ''} números` : pad(s.numero, dados.config.quantidade)}</b>
           <span class="muted">${new Date(s.data).toLocaleString('pt-BR')}</span></div>
           ${s.premio ? `<div><b>🏆 ${esc(s.premio)}</b></div>` : ''}
           <div>${esc(s.nome)} · <a href="https://wa.me/55${esc(s.telefone)}" target="_blank" rel="noopener">${telefoneFmt(s.telefone)}</a> · pedido #${esc(s.pedido)}</div>
@@ -920,7 +947,7 @@
       if (!n) {
         ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fillStyle = '#23244a'; ctx.fill();
         ctx.fillStyle = '#a9aacb'; ctx.font = 'bold 36px system-ui'; ctx.textAlign = 'center';
-        ctx.fillText('Sem números pagos', 0, 12); ctx.restore(); return;
+        ctx.fillText(premioEscolhido()?.especial ? 'Ninguém com ' + dados.aparencia.minDestaques + '+ números' : 'Sem números pagos', 0, 12); ctx.restore(); return;
       }
       const seg = Math.PI * 2 / n;
       const mostrarTexto = n <= 90;
@@ -933,7 +960,7 @@
         if (mostrarTexto) {
           ctx.save(); ctx.rotate(a + seg / 2);
           ctx.fillStyle = '#fff'; ctx.font = `bold ${fonte}px system-ui`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-          ctx.fillText(pad(numerosRoleta[i], dados.config.quantidade), R - 18, 0);
+          ctx.fillText(numerosRoleta[i].rotulo.slice(0, 12), R - 18, 0);
           ctx.restore();
         }
       }
@@ -953,9 +980,10 @@
 
     $('#girarBtn').onclick = async () => {
       if (girando) return;
-      numerosRoleta = numerosPagos();
+      numerosRoleta = entradasRoleta();
+      const especial = !!premioEscolhido()?.especial;
       $('#sorteioErro').innerHTML = '';
-      if (!numerosRoleta.length) { $('#sorteioErro').innerHTML = '<div class="erro">Confirme pelo menos um pagamento antes de sortear.</div>'; return; }
+      if (!numerosRoleta.length) { $('#sorteioErro').innerHTML = `<div class="erro">${especial ? `Ninguém (que ainda não ganhou) tem ${dados.aparencia.minDestaques}+ números pagos.` : 'Confirme pelo menos um pagamento antes de sortear.'}</div>`; return; }
       const premioId = (dados.config.premios || []).length ? $('#premioSorteio').value : '';
       if (premioId && dados.sorteios.some(s => s.premioId === premioId) && !confirm('Este prêmio já foi sorteado. Sortear ele de novo?')) return;
       if (!premioId && dados.sorteios.length && !confirm('Já existe um sorteio no histórico. Sortear outro número? (o que já saiu fica de fora)')) return;
@@ -966,7 +994,7 @@
       girando = true; $('#girarBtn').disabled = true;
       $('#vencedorInfo').innerHTML = ''; $('#giraTxt').textContent = 'Girando…';
       const n = numerosRoleta.length, seg = Math.PI * 2 / n;
-      const alvo = numerosRoleta.indexOf(r.numero);
+      const alvo = numerosRoleta.findIndex(x => x.chave === (r.especial ? r.telefone : r.numero));
       const folga = (Math.random() * 0.6 + 0.2) * seg;
       let final = -Math.PI / 2 - alvo * seg - folga;
       const voltas = 8 * Math.PI * 2;
@@ -979,14 +1007,14 @@
           const t = Math.min(1, (agora - t0) / dur);
           rotacao = inicio + (final - inicio) * ease(t);
           desenharRoleta();
-          $('#numeroAtual').textContent = pad(numerosRoleta[indiceNoPonteiro()], dados.config.quantidade);
+          $('#numeroAtual').textContent = numerosRoleta[indiceNoPonteiro()].rotulo;
           t < 1 ? requestAnimationFrame(quadro) : fim();
         }
         requestAnimationFrame(quadro);
       });
 
-      $('#giraTxt').textContent = '🎉 Número sorteado';
-      $('#numeroAtual').textContent = pad(r.numero, dados.config.quantidade);
+      $('#giraTxt').textContent = r.especial ? `🎉 Sorteado(a) · ${r.qtd} números comprados` : '🎉 Número sorteado';
+      $('#numeroAtual').textContent = r.especial ? r.nome.split(' ')[0] : pad(r.numero, dados.config.quantidade);
       $('#vencedorInfo').innerHTML = `${r.premio ? `<div class="muted">🏆 ${esc(r.premio)}</div>` : ''}<h2 style="margin:8px 0 4px">${esc(r.nome)}</h2>
         <div class="muted">${telefoneFmt(r.telefone)} · pedido #${esc(r.pedido)}</div>
         <a class="btn btn-verde" style="margin-top:12px" target="_blank" rel="noopener"

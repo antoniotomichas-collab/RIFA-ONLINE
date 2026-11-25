@@ -277,7 +277,8 @@ app.get('/api/rifa', (req, res) => {
     config: configPublica(),
     ocupados: numerosOcupados(),
     ganhador: ultimo ? { numero: ultimo.numero, nome: primeiroNome(ultimo.nome), premio: ultimo.premio || '', data: ultimo.data } : null,
-    ganhadores: db.sorteios.map(s => ({ numero: s.numero, nome: primeiroNome(s.nome), premio: s.premio || '', premioId: s.premioId || '', data: s.data })),
+    ganhadores: db.sorteios.map(s => ({ numero: s.numero, nome: primeiroNome(s.nome), premio: s.premio || '', premioId: s.premioId || '',
+      especial: !!s.especial, qtd: s.especial ? s.qtd : undefined, data: s.data })),
     // Painel de quem comprou bastante (só pagamentos confirmados)
     destaques: db.aparencia.mostrarDestaques ? destaquesPublicos() : [],
     // Prova social: últimos pagamentos confirmados, só com primeiro nome e inicial
@@ -302,16 +303,19 @@ function formatarNome(nome, formato) {
 }
 
 // Soma os números pagos de cada comprador (pelo WhatsApp) e mostra quem passou do mínimo
-function destaquesPublicos() {
-  const a = db.aparencia, mapa = new Map();
+function compradoresDestaque() {
+  const mapa = new Map();
   for (const p of db.pedidos) {
     if (p.status !== 'pago') continue;
-    const x = mapa.get(p.telefone) || { nome: p.nome, qtd: 0 };
+    const x = mapa.get(p.telefone) || { nome: p.nome, telefone: p.telefone, pedido: p.codigo, qtd: 0 };
     x.qtd += p.numeros.length;
     mapa.set(p.telefone, x);
   }
-  return [...mapa.values()].filter(x => x.qtd >= a.minDestaques).sort((x, y) => y.qtd - x.qtd)
-    .slice(0, a.maxDestaques).map(x => ({ nome: formatarNome(x.nome, a.nomeDestaques), qtd: x.qtd }));
+  return [...mapa.values()].filter(x => x.qtd >= db.aparencia.minDestaques).sort((x, y) => y.qtd - x.qtd);
+}
+function destaquesPublicos() {
+  const a = db.aparencia;
+  return compradoresDestaque().slice(0, a.maxDestaques).map(x => ({ nome: formatarNome(x.nome, a.nomeDestaques), qtd: x.qtd }));
 }
 
 // Criar pedido (reserva os números)
@@ -372,8 +376,8 @@ app.get('/api/pedidos/:id', async (req, res) => {
   const p = db.pedidos.find(x => x.id === req.params.id);
   if (!p) return res.status(404).json({ erro: 'Pedido não encontrado.' });
   const dados = pedidoPublico(p);
-  const venceu = p.status === 'pago' ? [...db.sorteios].reverse().find(s => p.numeros.includes(s.numero)) : null;
-  dados.ganhou = venceu ? venceu.numero : null;
+  const venceu = p.status === 'pago' ? [...db.sorteios].reverse().find(s => s.especial ? s.telefone === p.telefone : p.numeros.includes(s.numero)) : null;
+  dados.ganhou = venceu ? (venceu.especial ? p.numeros[0] : venceu.numero) : null;
   dados.premioGanho = venceu ? venceu.premio || db.config.premio : null;
   dados.qr = await QRCode.toDataURL(dados.pix, { margin: 1, width: 320 });
   dados.rifa = configPublica();
@@ -497,7 +501,7 @@ app.put('/api/admin/premios', exigirAdmin, (req, res) => {
     if (!nome) return res.status(400).json({ erro: `Dê um nome ao ${i + 1}º prêmio (ou remova ele).` });
     const foto = /^\/uploads\/[\w.-]+$/.test(x.foto || '') ? x.foto : '';
     premios.push({ id: /^[a-f0-9]{8,24}$/.test(x.id || '') ? x.id : crypto.randomBytes(6).toString('hex'),
-      nome, descricao: String(x.descricao || '').trim().slice(0, 500), foto });
+      nome, descricao: String(x.descricao || '').trim().slice(0, 500), foto, especial: Boolean(x.especial) });
   }
   // Apaga fotos de prêmios removidos (se não forem usadas em outro lugar)
   const emUso = new Set([...premios.map(p => p.foto), ...db.config.fotos]);
@@ -547,12 +551,24 @@ app.post('/api/admin/pedidos/:id/:acao', exigirAdmin, (req, res) => {
 
 // Sorteio: o servidor escolhe o número (aleatório seguro) e a roleta só anima até ele
 app.post('/api/admin/sorteio', exigirAdmin, (req, res) => {
+  const premio = (db.config.premios || []).find(x => x.id === req.body.premioId);
+  // Prêmio especial: sorteia uma pessoa entre quem comprou o mínimo (uma chance por pessoa)
+  if (premio && premio.especial) {
+    const jaGanhou = new Set(db.sorteios.filter(s => s.especial).map(s => s.telefone));
+    const candidatos = compradoresDestaque().filter(x => !jaGanhou.has(x.telefone));
+    if (!candidatos.length) return res.status(400).json({ erro: `Ninguém (que ainda não ganhou) tem ${db.aparencia.minDestaques}+ números pagos.` });
+    const x = candidatos[crypto.randomInt(candidatos.length)];
+    const resultado = { numero: null, especial: true, qtd: x.qtd, premio: premio.nome, premioId: premio.id,
+      nome: x.nome, telefone: x.telefone, pedido: x.pedido, data: new Date().toISOString() };
+    db.sorteios.push(resultado);
+    salvar();
+    return res.json(resultado);
+  }
   const pagos = db.pedidos.filter(p => p.status === 'pago');
   // Número que já ganhou um prêmio não concorre de novo
-  const jaSaiu = new Set(db.sorteios.map(s => s.numero));
+  const jaSaiu = new Set(db.sorteios.filter(s => !s.especial).map(s => s.numero));
   const numeros = pagos.flatMap(p => p.numeros.map(n => ({ n, p }))).filter(x => !jaSaiu.has(x.n));
   if (!numeros.length) return res.status(400).json({ erro: jaSaiu.size ? 'Todos os números pagos já foram sorteados.' : 'Nenhum número pago para sortear.' });
-  const premio = (db.config.premios || []).find(x => x.id === req.body.premioId);
   const sorteado = numeros[crypto.randomInt(numeros.length)];
   const resultado = {
     numero: sorteado.n,

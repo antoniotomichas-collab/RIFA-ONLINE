@@ -464,3 +464,5 @@ body.com-barra .recente { bottom: 96px; }
 }
 .salvar-barra { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .pendente-aviso { color: var(--laranja); font-weight: 700; font-size: 14px; }
+.premio-esp { font-size: 12px; font-weight: 700; color: var(--destaque); margin-top: 2px; }
+.destaques-especial { background: color-mix(in srgb, var(--destaque) 14%, transparent); border: 1px dashed var(--destaque); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-size: 14px; }
